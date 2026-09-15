@@ -103,13 +103,25 @@ back with `omarchy-shell omarchy.bar settingsIcon true`.
 # The plugin is discovered
 omarchy plugin list | grep -i omaltbar
 
-# Geometry and state readout, then a journal filter on the new shell PID
+# Geometry and state readout, then a journal filter on the exact shell process
 omarchy-shell omarchy.bar debugIslandGeometry | jq '{screen, displayScale, pillWidth, pillHeight}'
-PID=$(pgrep -f 'quickshell -n -p /usr/share/omarchy/shell' | tail -1)
-journalctl --user --since "1 min ago" | grep -F "$PID" | grep -iE "TypeError|ReferenceError|Cannot read|VMEMetaObject" | grep -vE "hideTooltip|VMEMetaObject|WidgetButton.qml|panels/audio/Panel.qml" | tail -n 30
+PID=$(pgrep -x quickshell | head -n 1)
+journalctl --user _PID="$PID" --since "1 min ago" | grep -iE "TypeError|ReferenceError|Cannot read|VMEMetaObject" | grep -vE "hideTooltip|WidgetButton.qml|panels/audio/Panel.qml" | tail -n 30
 ```
 
+`pgrep -x quickshell` matches the process name exactly, so the recipe never resolves its own lookup
+subprocess; `journalctl --user _PID="$PID"` binds the query to that process through a journal field
+instead of matching its number as text. If more than one `quickshell` process exists, `head -n 1`
+picks the oldest, which is the long-lived shell. An empty result means the shell logged nothing in
+the window — not a failure.
+
+`VMEMetaObject` stays in the include and out of the exclude on purpose: the plugin's own teardown
+warnings are the class this recipe is meant to surface, at the cost of accepting shell-side noise of
+the same class.
+
 `rescanPlugins` reloads views but does not reliably recompile the active bar or refresh the `IpcHandler` function list. Always use `omarchy restart shell` and judge health from the **new** shell PID.
+
+Before judging runtime behavior, lint the tree: `bash lint.sh` — see [`docs/linting.md`](docs/linting.md) for the invocation, prerequisites and the documented baseline.
 
 ## External dependencies
 
@@ -169,4 +181,5 @@ The plugin runs unsandboxed with your own user privileges. It does not use `sudo
 - [`docs/configuration.md`](docs/configuration.md) — the full `bar.island*` key reference and the shell API commands that set them.
 - [`docs/architecture.md`](docs/architecture.md) — how the bar replacement, island pages and native views work, plus the file map.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — behavior notes (toast capture, focus policy, drag & drop) and fixes for the common failures.
+- [`docs/linting.md`](docs/linting.md) — the advisory `qmllint` gate, its prerequisites and the finding baseline.
 - [`docs/development-history.md`](docs/development-history.md) — the per-round changelog for Rounds 7–9.
