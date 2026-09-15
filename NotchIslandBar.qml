@@ -11,7 +11,7 @@ import "file:///usr/share/omarchy/shell/plugins/bar/BarModel.js" as BarModel
 
 // Notch Island — Omarchy bar replacement.
 //
-// Activated by setting shell.json `bar.id = "local.notch-island"`; the host
+// Activated by setting shell.json `bar.id = "angeeeld.omaltbar"`; the host
 // (shell.qml pluginBarLoader) instantiates this file via Loader.source and
 // injects omarchyPath/shell/manifest/barWidgetRegistry/pluginRegistry/barConfig
 // through configureBar(). That is why the injected properties below are plain
@@ -317,7 +317,7 @@ Item {
   // (default true) is the authority: turning it off removes the icon from the
   // layout and keeps it off.
   readonly property string pluginId:
-    String(root.manifest && root.manifest.id ? root.manifest.id : "local.notch-island")
+    String(root.manifest && root.manifest.id ? root.manifest.id : "angeeeld.omaltbar")
 
   readonly property bool settingsIconEnabled: {
     var v = barConfig ? barConfig.islandSettingsIcon : undefined
@@ -1439,7 +1439,7 @@ Item {
       else if (text === "false" || text === "off" || text === "0") root.setSettingsIcon(false)
     }
     // Switch the active bar implementation through the shell config API:
-    // `omarchy-shell omarchy.bar useBar local.notch-island|omarchy.bar`.
+    // `omarchy-shell omarchy.bar useBar angeeeld.omaltbar|omarchy.bar`.
     function useBar(id: string): void {
       root.setActiveBar(String(id || ""))
     }

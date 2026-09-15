@@ -27,10 +27,10 @@ import qs.Commons
 Panel {
   id: root
 
-  moduleName: "local.notch-island"
-  ipcTarget: "local.notch-island.settings"
+  moduleName: "angeeeld.omaltbar"
+  ipcTarget: "angeeeld.omaltbar.settings"
 
-  readonly property string restoreCommand: "omarchy bar use local.notch-island"
+  readonly property string restoreCommand: "omarchy bar use angeeeld.omaltbar"
 
   // --- bar switch (confirmed before it disables the plugin) -----------------
   property bool confirmOpen: false

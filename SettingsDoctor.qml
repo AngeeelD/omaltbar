@@ -48,7 +48,7 @@ Column {
   }
 
   readonly property bool islandActive:
-    String((root.barConfig && root.barConfig.id) || "") === "local.notch-island"
+    String((root.barConfig && root.barConfig.id) || "") === "angeeeld.omaltbar"
 
   readonly property bool settingsIconInBar: {
     var cfg = root.barConfig
@@ -60,7 +60,7 @@ Column {
       for (var i = 0; i < entries.length; i++) {
         var entry = entries[i]
         var id = String((entry && entry.id !== undefined) ? entry.id : (entry || ""))
-        if (id === "local.notch-island") return true
+        if (id === "angeeeld.omaltbar") return true
       }
     }
     return false
@@ -78,13 +78,13 @@ Column {
       && root.bindingsLua.indexOf('o.bind("XF86MonBrightnessUp"') !== -1
 
   readonly property bool managedBlock:
-    root.bindingsLua.indexOf(">>> local.notch-island hotkeys") !== -1
+    root.bindingsLua.indexOf(">>> angeeeld.omaltbar hotkeys") !== -1
 
   // The block is written at the end of bindings.lua, so everything after the
   // marker is ours. Counting the managed binds keeps the row informative when
   // the block exists but every shortcut was cleared.
   readonly property int managedBindCount: {
-    var marker = ">>> local.notch-island hotkeys"
+    var marker = ">>> angeeeld.omaltbar hotkeys"
     var idx = root.bindingsLua.indexOf(marker)
     if (idx < 0) return 0
     var text = root.bindingsLua.substring(idx)
@@ -109,8 +109,8 @@ Column {
     {
       label: "Island is the active bar",
       ok: root.islandActive,
-      detail: root.islandActive ? "bar.id = local.notch-island" : "another bar is selected",
-      hint: root.islandActive ? "" : "Restore it with: omarchy bar use local.notch-island"
+      detail: root.islandActive ? "bar.id = angeeeld.omaltbar" : "another bar is selected",
+      hint: root.islandActive ? "" : "Restore it with: omarchy bar use angeeeld.omaltbar"
     },
     {
       label: "Settings icon on the bar",

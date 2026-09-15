@@ -18,10 +18,10 @@ A notch-anchored bar replacement that hosts Omarchy widgets inside a pill and ex
 # 1. Install — from git (omarchy clones it into ~/.config/omarchy/plugins)
 omarchy plugin add <git-url> --enable
 # ...or drop the folder in by hand:
-# cp -r local.notch-island ~/.config/omarchy/plugins/
+# cp -r angeeeld.omaltbar ~/.config/omarchy/plugins/
 
 # 2. Activate — make it the bar (writes bar.id through the shell config API)
-omarchy bar use local.notch-island
+omarchy bar use angeeeld.omaltbar
 
 # 3. Apply — hot-reload is NOT reliable for the bar (stale cache, corrupt QQmlVMEMetaObject)
 omarchy restart shell
@@ -41,7 +41,7 @@ The plugin is a drop-in **bar** replacement: it loads with nothing but `bar.id`,
 
 | | Tweak | Result if you skip it |
 |---|-------|----------------------|
-| **Required** | `bar.id = "local.notch-island"` | The host never loads this plugin — you keep the stock bar |
+| **Required** | `bar.id = "angeeeld.omaltbar"` | The host never loads this plugin — you keep the stock bar |
 | Optional | `caps:hyper` + the Super+Caps bind | No hotkey to toggle the island (the pill hover zones still work) |
 | Optional | Volume/brightness key rebind | The media keys keep showing the native `omarchy.osd` popup |
 | Optional | Weather location | The weather row shows `--°C` |
@@ -53,10 +53,10 @@ The plugin is a drop-in **bar** replacement: it loads with nothing but `bar.id`,
 # install from git (omarchy clones into ~/.config/omarchy/plugins and enables it)
 omarchy plugin add <git-url> --enable
 # ...or drop the folder in by hand:
-# cp -r local.notch-island ~/.config/omarchy/plugins/
+# cp -r angeeeld.omaltbar ~/.config/omarchy/plugins/
 
 # make it the active bar (writes bar.id via omarchy-shell-config — no hand-edit)
-omarchy bar use local.notch-island
+omarchy bar use angeeeld.omaltbar
 
 # apply (hot-reload is not reliable for the bar)
 omarchy restart shell
@@ -195,7 +195,7 @@ omarchy-shell shell setBarWidget omarchy.indicators islandPinned true '{}'
 
 # --- Round 8, all persisted through the same shell config API --------------
 # Which bar is active (empty / "default" means the stock bar)
-omarchy-shell omarchy.bar useBar local.notch-island
+omarchy-shell omarchy.bar useBar angeeeld.omaltbar
 omarchy-shell omarchy.bar useBar omarchy.bar
 
 # Settings gear on the bar (also the CONTEXTS/HOTKEYS/TIMING panel sections)
@@ -318,8 +318,8 @@ omarchy restart shell
 Then verify with `debugIslandGeometry` (new PID). `qmllint` is at `/usr/lib/qt6/bin/qmllint`:
 
 ```bash
-/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/local.notch-island/NotchIslandBar.qml
-/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/local.notch-island/DynamicIsland.qml
+/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/angeeeld.omaltbar/NotchIslandBar.qml
+/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/angeeeld.omaltbar/DynamicIsland.qml
 ```
 
 **Bar completely hidden (pill at y=-64)**
@@ -359,9 +359,9 @@ The round that made the plugin behave like any other Omarchy plugin *besides* be
 | Item | What changed |
 |------|--------------|
 | **Settings widget** — `kinds: ["bar","bar-widget"]` plus `entryPoints.barWidget` (`SettingsWidget.qml`) | `omarchy plugin list` shows it as a widget and `omarchy plugin add <url> --enable` still activates it as the bar. The icon is a miniature bar plate with the gear on top (`BarIconButton.iconComponent`), and it opens a `qs.Ui.Panel` + `KeyboardPanel` popup exactly like the audio/bluetooth panels |
-| **A bar-kind plugin cannot place its own widget** | `PluginRegistry.setEnabled()` writes `bar.id` and returns before the placement block, so `omarchy bar put local.notch-island` reports success without adding anything. The island places its own entry through `mutateShellConfig`, governed by `bar.islandSettingsIcon` |
+| **A bar-kind plugin cannot place its own widget** | `PluginRegistry.setEnabled()` writes `bar.id` and returns before the placement block, so `omarchy bar put angeeeld.omaltbar` reports success without adding anything. The island places its own entry through `mutateShellConfig`, governed by `bar.islandSettingsIcon` |
 | **The entry is a custom-qml entry** — `{id, source: ".../SettingsWidget.qml"}` | A `bar`-kind plugin is "enabled" only while it is the selected bar, so its registry component disappears on the stock bar and the icon would be a dead placeholder. A `source:` entry loads the file directly, so the gear keeps working in **both** bars — which is what makes the bar switch reversible from the UI |
-| **Bar switch with confirmation** | `bar.id` is the only thing written. The stock direction asks first, names what it means (the plugin reports `disabled` while another bar is active — the same way `omarchy.bar` reads `disabled` right now) and shows `omarchy bar use local.notch-island` with a copy button |
+| **Bar switch with confirmation** | `bar.id` is the only thing written. The stock direction asks first, names what it means (the plugin reports `disabled` while another bar is active — the same way `omarchy.bar` reads `disabled` right now) and shows `omarchy bar use angeeeld.omaltbar` with a copy button |
 | **Settings panel** — `SettingsPanel.qml`: BAR · APPEARANCE · TIMING · INTERACTION · HOTKEYS · CONTEXTS · DOCTOR | Everything persists through `shell.mutateShellConfig` and applies live. There is no generic Omarchy settings form (`barWidget.settingsForm` is dead metadata with no consumer), so the rows are hand-rolled from the `qs.Ui` kit |
 | **Timing + motion** — `islandTransientTtlMs`, `islandTransientLeadMs`, `islandToastHoldMs`, `islandToastTtlMs`, `islandMediaPeekMs`, `islandMotionFast/Base/Slow` | Clamped on read, so a bad value self-corrects; the toast TTL is derived to stay ahead of the toast hold. The panel's slider leaves the mouse wheel alone (upstream `PanelSlider` commits on every notch, so scrolling the panel edited values instead of scrolling) |
 | **Managed hotkeys** — `bar.islandHotkeys` + `hotkeys.sh` | Hyprland has no persistent runtime keybind API, so the script rewrites one marked block in `~/.config/hypr/bindings.lua` and reloads. `hl.unbind` runs before every `o.bind`, so a hand-written line for the same key cannot fire twice |
@@ -409,11 +409,11 @@ The round that made the island's toasts actionable and its two surfaces (and pil
 
 | File | One line |
 |------|----------|
-| `manifest.json` | Plugin identity (`local.notch-island`, `kinds: ["bar","bar-widget"]`, entries `bar` → `NotchIslandBar.qml` and `barWidget` → `SettingsWidget.qml`, `barWidget.defaultSection: right`) |
+| `manifest.json` | Plugin identity (`angeeeld.omaltbar`, `kinds: ["bar","bar-widget"]`, entries `bar` → `NotchIslandBar.qml` and `barWidget` → `SettingsWidget.qml`, `barWidget.defaultSection: right`) |
 | `SettingsWidget.qml` | The plugin's bar-widget: the gear icon (`iconComponent` = bar plate + gear) and its `qs.Ui.Panel` popup. Works in either bar; owns the bar-switch confirmation overlay |
 | `SettingsPanel.qml` | The panel content: BAR, APPEARANCE, TIMING, INTERACTION, HOTKEYS, CONTEXTS, DOCTOR. Reads `bar.barConfig`, writes `bar.shell.mutateShellConfig` — the only config surfaces both bars expose |
 | `SettingsDoctor.qml` | Read-only setup diagnostics (bar selection, icon placement, `caps:hyper`, media-key rebinds, managed block, backlight). Static: reads the Hyprland files |
-| `hotkeys.sh` | Renders the marked `local.notch-island hotkeys` block in `~/.config/hypr/bindings.lua` from `bar.islandHotkeys` and runs `hyprctl reload` |
+| `hotkeys.sh` | Renders the marked `angeeeld.omaltbar hotkeys` block in `~/.config/hypr/bindings.lua` from `bar.islandHotkeys` and runs `hyprctl reload` |
 | `NotchIslandBar.qml` | Bar root, `bar` contract, motion tokens, the clamped `bar.island*` keys (incl. round 9 opacity/pill form/pill length), `IslandUnit` (per-screen geometry, pill zones, drag state, transient peek, `IpcHandler` `island`/`notchScale`/`islandFirst`/`opacity`/`pillCompact`/`pillWidth`/`debugIslandGeometry`/`debugToastSnapshots`) |
 | `DynamicIsland.qml` | Island body router (painting `surfaceOpacity` from `bar.islandOpacity`), native view registration, pager, drag overlay/drop bar, fallback view |
 | `IslandState.qml` | Expand/collapse, `pageIds`/`pageId`/`entryId`/`paging`/`manualContext`, `autoOpened` (automatic opens never take focus), `transientContext`/`transientVisible`/`transientSuspended` (owned token set), `bodyShowsClock`, `revealSide`/`soloWidgetId` |
@@ -438,4 +438,4 @@ The round that made the island's toasts actionable and its two surfaces (and pil
 
 ---
 
-Config surface lives in `~/.config/omarchy/shell.json` under `bar` and `bar.layout`; every mutable key has a shell IPC path, so `shell.json` is never hand-edited — activation is `omarchy bar use local.notch-island`, and the optional keys above are set through the shell API. Hot-reload is not trusted for bar changes — `omarchy restart shell` is the supported apply step.
+Config surface lives in `~/.config/omarchy/shell.json` under `bar` and `bar.layout`; every mutable key has a shell IPC path, so `shell.json` is never hand-edited — activation is `omarchy bar use angeeeld.omaltbar`, and the optional keys above are set through the shell API. Hot-reload is not trusted for bar changes — `omarchy restart shell` is the supported apply step.

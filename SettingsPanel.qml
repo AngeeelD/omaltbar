@@ -39,9 +39,9 @@ Column {
 
   readonly property bool islandActive: {
     var id = String((barConfig && barConfig.id) || "")
-    return id === "local.notch-island"
+    return id === "angeeeld.omaltbar"
   }
-  readonly property string activeBarValue: root.islandActive ? "local.notch-island" : "omarchy.bar"
+  readonly property string activeBarValue: root.islandActive ? "angeeeld.omaltbar" : "omarchy.bar"
 
   readonly property bool settingsIconOn: {
     var v = barConfig ? barConfig.islandSettingsIcon : undefined
@@ -95,7 +95,7 @@ Column {
   readonly property string pluginDir: {
     var m = bar ? bar.manifest : null
     if (m && m.__sourceDir) return String(m.__sourceDir)
-    return Quickshell.env("HOME") + "/.config/omarchy/plugins/local.notch-island"
+    return Quickshell.env("HOME") + "/.config/omarchy/plugins/angeeeld.omaltbar"
   }
   readonly property string hotkeyScript: root.pluginDir + "/hotkeys.sh"
 
@@ -323,7 +323,7 @@ Column {
 
     ButtonGroup {
       options: [
-        { value: "local.notch-island", label: "Omaltbar" },
+        { value: "angeeeld.omaltbar", label: "Omaltbar" },
         { value: "omarchy.bar", label: "Stock bar" }
       ]
       value: root.activeBarValue

@@ -17,13 +17,13 @@ set -euo pipefail
 
 SHELL_JSON="${OMARCHY_SHELL_JSON:-$HOME/.config/omarchy/shell.json}"
 BINDINGS_LUA="${HYPR_BINDINGS_LUA:-$HOME/.config/hypr/bindings.lua}"
-BEGIN='-- >>> local.notch-island hotkeys (managed; edit them in the island settings panel)'
-END='-- <<< local.notch-island hotkeys'
+BEGIN='-- >>> angeeeld.omaltbar hotkeys (managed; edit them in the island settings panel)'
+END='-- <<< angeeeld.omaltbar hotkeys'
 
 # action key | bind description | command
 ACTIONS=(
   "island.toggle|Omaltbar|omarchy-shell omarchy.bar island"
-  "island.settings|Omaltbar settings|omarchy-shell local.notch-island.settings toggle"
+  "island.settings|Omaltbar settings|omarchy-shell angeeeld.omaltbar.settings toggle"
 )
 
 render_block() {
