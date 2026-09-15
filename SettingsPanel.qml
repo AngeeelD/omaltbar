@@ -295,7 +295,7 @@ Column {
   // --- content --------------------------------------------------------------
   Text {
     width: parent.width
-    text: "Notch Island"
+    text: "Omaltbar"
     color: root.foreground
     font.family: root.fontFamily
     font.pixelSize: Style.font.display
@@ -323,7 +323,7 @@ Column {
 
     ButtonGroup {
       options: [
-        { value: "local.notch-island", label: "Notch Island" },
+        { value: "local.notch-island", label: "Omaltbar" },
         { value: "omarchy.bar", label: "Stock bar" }
       ]
       value: root.activeBarValue

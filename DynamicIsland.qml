@@ -686,7 +686,7 @@ Rectangle {
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        text: "Notch Island"
+        text: "Omaltbar"
         color: Color.bar.text
         font.family: Style.font.family
         font.pixelSize: Style.font.heading

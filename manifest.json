@@ -1,18 +1,19 @@
 {
   "schemaVersion": 1,
   "id": "local.notch-island",
-  "name": "Notch Island",
-  "version": "0.3.0",
-  "author": "local",
-  "description": "Notch-shaped bar replacement that hosts Omarchy bar widgets and routes their clicks into island views, plus a settings panel widget",
+  "name": "Omaltbar",
+  "version": "1.0.0",
+  "author": "Ángel Durán",
+  "license": "MIT",
+  "description": "Notch-shaped replacement for the Omarchy bar: it hosts your bar widgets and routes their clicks into Dynamic Island views for media, notifications, volume, brightness, weather, screen recording, and quick settings",
   "kinds": ["bar", "bar-widget"],
   "entryPoints": {
     "bar": "NotchIslandBar.qml",
     "barWidget": "SettingsWidget.qml"
   },
   "barWidget": {
-    "displayName": "Notch Island",
-    "description": "Settings and diagnostics for the Notch Island bar",
+    "displayName": "Omaltbar",
+    "description": "Settings and diagnostics for the Omaltbar bar",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right"

@@ -1,4 +1,4 @@
-# Notch Island — Dynamic Island bar for Omarchy
+# Omaltbar — Dynamic Island bar for Omarchy
 
 A notch-anchored bar replacement that hosts Omarchy widgets inside a pill and expands into a paged island body. Replaces `omarchy.bar` without forking upstream panels.
 
@@ -77,7 +77,7 @@ hl.config({ input = { kb_options = "caps:hyper" } })
 `~/.config/hypr/bindings.lua`:
 
 ```lua
-o.bind("SUPER + MOD3 + Hyper_L", "Notch Island", "omarchy-shell omarchy.bar island")
+o.bind("SUPER + MOD3 + Hyper_L", "Omaltbar", "omarchy-shell omarchy.bar island")
 ```
 
 Skipping it costs only the keyboard toggle; the pill hover zones are unaffected.

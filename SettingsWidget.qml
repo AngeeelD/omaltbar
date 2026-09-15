@@ -225,7 +225,7 @@ Panel {
             Text {
               width: parent.width
               wrapMode: Text.WordWrap
-              text: "Notch Island stays installed but reports as disabled while another bar is active, and its settings icon only works while the island is the bar. To restore it later, run:"
+              text: "Omaltbar stays installed but reports as disabled while another bar is active, and its settings icon only works while the island is the bar. To restore it later, run:"
               color: Color.popups.text
               opacity: 0.75
               font.family: Style.font.family

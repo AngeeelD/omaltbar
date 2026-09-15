@@ -22,8 +22,8 @@ END='-- <<< local.notch-island hotkeys'
 
 # action key | bind description | command
 ACTIONS=(
-  "island.toggle|Notch Island|omarchy-shell omarchy.bar island"
-  "island.settings|Notch Island settings|omarchy-shell local.notch-island.settings toggle"
+  "island.toggle|Omaltbar|omarchy-shell omarchy.bar island"
+  "island.settings|Omaltbar settings|omarchy-shell local.notch-island.settings toggle"
 )
 
 render_block() {
