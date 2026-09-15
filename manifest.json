@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "local.notch-island",
+  "name": "Notch Island",
+  "version": "0.3.0",
+  "author": "local",
+  "description": "Notch-shaped bar replacement that hosts Omarchy bar widgets and routes their clicks into island views, plus a settings panel widget",
+  "kinds": ["bar", "bar-widget"],
+  "entryPoints": {
+    "bar": "NotchIslandBar.qml",
+    "barWidget": "SettingsWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Notch Island",
+    "description": "Settings and diagnostics for the Notch Island bar",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
