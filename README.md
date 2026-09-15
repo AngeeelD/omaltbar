@@ -53,14 +53,25 @@ Full key reference and the shell API: [`docs/configuration.md`](docs/configurati
 ## Remove
 
 ```bash
-# If Omaltbar is the active bar, switch back first
-omarchy bar use omarchy.bar
+# Take the settings icon off the bar first, while Omaltbar is the active bar
+omarchy-shell omarchy.bar settingsIcon false
 
 # Remove the plugin
 omarchy plugin remove angeeeld.omaltbar
 ```
 
-`omarchy plugin remove` disables the plugin (when it is enabled) and then removes it. A plugin installed from git is deleted; its upstream repository is unaffected.
+The first step matters. Omaltbar is a `bar`-kind plugin, and the shell's plugin registry treats
+those as bar-exclusive: `setEnabled` writes `bar.id` and returns before the `bar.layout`
+placement code runs, so the island reconciles its own icon entry instead, governed by
+`bar.islandSettingsIcon` (see [configuration](docs/configuration.md)). Retracting that entry is
+therefore the plugin's job, not the removal's, and `settingsIcon false` is the explicit way to ask
+for it. Run it while Omaltbar is still the active bar: once another bar is active, the island is
+unloaded and its IPC entry points are gone.
+
+`omarchy plugin remove` clears `bar.id` on its own, so switching back by hand
+(`omarchy bar use omarchy.bar`) is unnecessary — and running it first leaves you on the stock bar
+if you then abort the removal. A plugin installed from git is deleted; its upstream repository is
+unaffected.
 
 Related plugin commands:
 
@@ -70,20 +81,21 @@ omarchy plugin update angeeeld.omaltbar
 omarchy plugin validate <plugin-folder>
 ```
 
-### Known residue after removal
+### If residue is left behind
 
-`omarchy plugin remove` does not clean up the widget entry this plugin reconciled into
-`bar.layout`, because the shell's plugin registry only rewrites `bar.id` for a plugin whose
-kind is `bar`. The stale entry ends up pointing at a file that no longer exists, and the shell
-logs it:
+Removing the plugin without retracting the icon first can leave its `bar.layout` entry behind,
+pointing at a file that no longer exists. The shell then logs it:
 
 ```text
 WARN scene: file:///home/<user>/.config/omarchy/plugins/angeeeld.omaltbar/SettingsWidget.qml[-1:-1]: No such file or directory
 ```
 
-Beyond that log warning it is harmless, and reinstalling the plugin repairs it: the island
-reconciles its `bar.layout` entry by plugin id and rewrites the `source` path. A shell restart
-does **not** remove it.
+Beyond that log warning it is harmless. Reinstalling the plugin repairs it: the island reconciles
+its `bar.layout` entry by plugin id and rewrites the `source` path. A shell restart does **not**
+remove it.
+
+Note that `bar.islandSettingsIcon` survives a reinstall, so the icon stays hidden until you set it
+back with `omarchy-shell omarchy.bar settingsIcon true`.
 
 ## Verify the install
 
