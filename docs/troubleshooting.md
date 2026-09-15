@@ -23,8 +23,8 @@ omarchy-shell omarchy.bar debugIslandGeometry | jq '{displayScale, notchScale, p
 Filter by the **new** shell PID only — old PID lines are stale:
 
 ```bash
-PID=$(pgrep -f 'quickshell -n -p /usr/share/omarchy/shell' | tail -1); echo $PID
-journalctl --user --since "2 min ago" | grep -F "$PID" | tail -n 80
+PID=$(pgrep -x quickshell | head -n 1); echo "$PID"
+journalctl --user _PID="$PID" --since "2 min ago" | tail -n 80
 ```
 
 **Media keys still show the native OSD**
@@ -37,7 +37,7 @@ omarchy-shell omarchy.bar debugIslandGeometry | jq '{expanded, displayedContext,
 # expected within ~1.3s: expanded=true, displayedContext="omarchy.volume", transientPeek=true
 ```
 
-Known benign teardown noise (not this plugin): a burst of `QQmlVMEMetaObject: Internal error - attempted to evaluate a function in an invalid context`, `@Ui/WidgetButton.qml ... hideTooltip is not a function` and `panels/audio/Panel.qml ... Cannot read property 'foreground' of null` whenever the island's view `Loader` swaps or tears down. They are `WARN`-level only and the health check above filters them out.
+Known benign teardown noise (not this plugin): a burst of `QQmlVMEMetaObject: Internal error - attempted to evaluate a function in an invalid context`, `@Ui/WidgetButton.qml ... hideTooltip is not a function` and `panels/audio/Panel.qml ... Cannot read property 'foreground' of null` whenever the island's view `Loader` swaps or tears down. They are `WARN`-level only and are not caused by this plugin: an attribution pass reproduced none of them across a controlled shell restart, traced the `barConfig` binding loop to shell-side wiring (`/usr/share/omarchy/shell/shell.qml:115`, no plugin frame) and attributed part of the historical `QQmlVMEMetaObject` lines to another plugin's `TypeError`. The verify recipe lists them on purpose (see the note in the README), so a regression stays visible instead of being filtered away.
 
 **Hot-reload didn't apply**
 Expected. `rescanPlugins` + `Qt.clearComponentCache` can serve a stale bar. Always:
@@ -46,12 +46,13 @@ Expected. `rescanPlugins` + `Qt.clearComponentCache` can serve a stale bar. Alwa
 omarchy restart shell
 ```
 
-Then verify with `debugIslandGeometry` (new PID). `qmllint` is at `/usr/lib/qt6/bin/qmllint`:
+Then verify with `debugIslandGeometry` (new PID). For static checks use the repository lint gate instead of a bare `qmllint <file>`: a bare invocation cannot resolve the shell's `qs.*` modules (it reports ~1366 findings, four of them failed imports) because a dotted import URI needs a `qs/` level the installed tree does not have.
 
 ```bash
-/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/angeeeld.omaltbar/NotchIslandBar.qml
-/usr/lib/qt6/bin/qmllint ~/.config/omarchy/plugins/angeeeld.omaltbar/DynamicIsland.qml
+bash lint.sh
 ```
+
+See [`linting.md`](linting.md) for the invocation, the prerequisites and the baseline.
 
 **Bar completely hidden (pill at y=-64)**
 `~/.local/state/omarchy/toggles/bar-off` exists. Remove it, or toggle via `omarchy-toggle-bar`, or call:
