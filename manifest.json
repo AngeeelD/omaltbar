@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "angeeeld.omaltbar",
   "name": "Omaltbar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Ángel Durán",
   "license": "MIT",
   "description": "Notch-shaped replacement for the Omarchy bar: it hosts your bar widgets and routes their clicks into Dynamic Island views for media, notifications, volume, brightness, weather, screen recording, and quick settings",
