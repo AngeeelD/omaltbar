@@ -184,3 +184,5 @@ The plugin runs unsandboxed with your own user privileges. It does not use `sudo
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — behavior notes (toast capture, focus policy, drag & drop) and fixes for the common failures.
 - [`docs/linting.md`](docs/linting.md) — the advisory `qmllint` gate, its prerequisites and the finding baseline.
 - [`docs/development-history.md`](docs/development-history.md) — the per-round changelog for Rounds 7–9.
+- [`docs/views.md`](docs/views.md) — the island's 11 native views with line counts, rendered content, mounting context ids and key interactions, plus prose for the three heaviest.
+- [`docs/development.md`](docs/development.md) — the lint → apply → health-check path for a change, linking each canonical recipe instead of restating it.

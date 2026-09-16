@@ -58,4 +58,8 @@
 
 [`docs/component-reference.md`](component-reference.md) — the island's 21 IPC commands with arguments, effect and stable/debug marking, the `IslandState` modes and transitions, and the context resolution precedence.
 
+## Views reference
+
+[`docs/views.md`](views.md) — the island's 11 native views with line counts, rendered content, mounting context ids and key interactions, with prose for the three heaviest (`QuickSettingsView`, `NotificationsView`, `NotificationToastView`).
+
 [← Back to the README](../README.md)
