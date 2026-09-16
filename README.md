@@ -180,6 +180,7 @@ The plugin runs unsandboxed with your own user privileges. It does not use `sudo
 - [`docs/setup.md`](docs/setup.md) — the tweaks that live outside the plugin folder, from the required bar activation to the optional hotkey, media-key rebind and weather location.
 - [`docs/configuration.md`](docs/configuration.md) — the full `bar.island*` key reference and the shell API commands that set them.
 - [`docs/architecture.md`](docs/architecture.md) — how the bar replacement, island pages and native views work, plus the file map.
+- [`docs/component-reference.md`](docs/component-reference.md) — the island IPC surface (arguments, effect, stable/debug), the state machine and the context precedence.
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — behavior notes (toast capture, focus policy, drag & drop) and fixes for the common failures.
 - [`docs/linting.md`](docs/linting.md) — the advisory `qmllint` gate, its prerequisites and the finding baseline.
 - [`docs/development-history.md`](docs/development-history.md) — the per-round changelog for Rounds 7–9.
