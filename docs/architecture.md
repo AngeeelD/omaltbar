@@ -54,4 +54,8 @@
 | `views/NotificationsView.qml` | History list + DND + dismiss/clear + clickable row bodies (default action) — page `jankeesvw.notification-center` |
 | `views/NotificationToastView.qml` | Snapshot toast (`toastSnapshots`, per-notification, no `popupModel`) with a clickable body running the default action — page `island.notificationToast` |
 
+## Component reference
+
+[`docs/component-reference.md`](component-reference.md) — the island's 21 IPC commands with arguments, effect and stable/debug marking, the `IslandState` modes and transitions, and the context resolution precedence.
+
 [← Back to the README](../README.md)
