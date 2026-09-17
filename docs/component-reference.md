@@ -120,6 +120,30 @@ of a grid context; `clearReveal()` defers while `panelOpen` is true or a
 `soloWidgetId` is set, because the grid tile is the live anchor of an open
 widget panel (`IslandState.qml:305-313`).
 
+### Manual context: `island.themeSwitcher`
+
+The theme picker (`views/ThemeSwitcherView.qml`) is a manual context, not a page.
+Its whole round trip is traceable through this file:
+
+- **Entry.** `Keys.onDownPressed` on the island card
+  (`NotchIslandBar.qml:3172`) bails unless the island is `expanded` and
+  `displayedContext` is not already this id, then calls `markInteraction()` and
+  `setContext("island.themeSwitcher")` (`IslandState.qml:342`). The picker's own
+  field and strip accept their arrow keys, so a Down that reaches the card is
+  always an entry from outside the picker.
+- **Exit.** `collapse()` (`IslandState.qml:352`) is the only exit: Escape on the
+  card, or a click on the body outside it. The picker owns no teardown.
+- **`pageIds` exclusion.** The id is registered in the `nativeViews` map only
+  (`DynamicIsland.qml:593`), never in the resolver's page list
+  (`ContextResolver.qml:298`), so while the picker is inactive
+  `pagePrev()`/`pageNext()` (`IslandState.qml:234`/`:227`) keep paging untouched.
+- **No new IPC command.** The 21-command block above is unchanged. Down is the
+  only trigger, and `debugOpen island.themeSwitcher` is the debug entry.
+- **Palette.** The cards read `ThemePalette.qml`, one instance owned by
+  `DynamicIsland` outside the body `Loader`, which makes a single warm-up pass at
+  plugin load and watches `~/.local/state/omarchy/current/theme.name`. The apply
+  path is `omarchy-theme-set <name>`, reconciled against that watcher.
+
 ## Context resolution
 
 `ContextResolver.qml` decides which contexts are alive, the order the island

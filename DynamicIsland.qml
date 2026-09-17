@@ -586,6 +586,27 @@ Rectangle {
     islandState.setNativeView("island.screenrecord", screenRecordView)
     islandState.setNativeView("jankeesvw.notification-center", notificationsView)
     islandState.setNativeView("island.notificationToast", notificationToastView)
+    // The theme picker is a manual context, not a page: registering it in this
+    // map must not add it to ContextResolver.pageIds, so Left/Right keep
+    // paging. The open card's Down guard is its only entry (NotchIslandBar),
+    // and it is deliberately NOT a clock face — the pill keeps its own time.
+    islandState.setNativeView("island.themeSwitcher", themeSwitcherView)
+  }
+
+  // --- theme picker ---------------------------------------------------------
+  // The palette cache is owned HERE, on the island body and outside the content
+  // Loader: the Loader destroys its item on every context switch, so a cache
+  // living in the view would re-warm the whole theme inventory on every open.
+  // Declared below the registration block rather than beside the other
+  // components so the registration line numbers the docs cite stay put.
+  ThemePalette { id: themePaletteSource }
+
+  Component {
+    id: themeSwitcherView
+    Views.ThemeSwitcherView {
+      islandBar: root.islandBar
+      themePalette: themePaletteSource
+    }
   }
 
   readonly property Component activeComponent: {
