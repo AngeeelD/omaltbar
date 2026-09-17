@@ -105,15 +105,16 @@ omarchy plugin list | grep -i omaltbar
 
 # Geometry and state readout, then a journal filter on the exact shell process
 omarchy-shell omarchy.bar debugIslandGeometry | jq '{screen, displayScale, pillWidth, pillHeight}'
-PID=$(pgrep -x quickshell | head -n 1)
+PID=$(pgrep -x -o quickshell)
 journalctl --user _PID="$PID" --since "1 min ago" | grep -iE "TypeError|ReferenceError|Cannot read|VMEMetaObject" | grep -vE "hideTooltip|WidgetButton.qml|panels/audio/Panel.qml" | tail -n 30
 ```
 
 `pgrep -x quickshell` matches the process name exactly, so the recipe never resolves its own lookup
 subprocess; `journalctl --user _PID="$PID"` binds the query to that process through a journal field
-instead of matching its number as text. If more than one `quickshell` process exists, `head -n 1`
-picks the oldest, which is the long-lived shell. An empty result means the shell logged nothing in
-the window — not a failure.
+instead of matching its number as text. If more than one `quickshell` process exists, `-o` takes the
+oldest by start time, which is the long-lived shell; `head -n 1` would take the lowest-numbered PID
+instead, which is the same process only while PIDs have not wrapped. An empty result means the shell
+logged nothing in the window — not a failure.
 
 `VMEMetaObject` stays in the include and out of the exclude on purpose: the plugin's own teardown
 warnings are the class this recipe is meant to surface, at the cost of accepting shell-side noise of
