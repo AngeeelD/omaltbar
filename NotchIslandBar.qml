@@ -1950,13 +1950,6 @@ Item {
     // drag the content out from under a physical notch and inspect what the
     // hardware cutout normally hides. Single knob, one line per surface.
     readonly property int debugTopOffset: 0
-    // --- debug: status-dial centring ----------------------------------------
-    // Vertical nudge, in logical px, for the pill's status-template glyphs
-    // (positive = down). 0 is production. One knob per dial so the Wi-Fi and
-    // battery rings can be centred independently while inspecting them up
-    // close; restore both to 0 once the final value is agreed.
-    readonly property int wifiDialNudgeY: 0
-    readonly property int batteryDialNudgeY: 0
     // True only on the built-in notched panel (eDP with a measured strip), so
     // an attached flat monitor keeps the old aspect-derived pill instead of
     // inheriting the wide cutout geometry.
@@ -2941,7 +2934,6 @@ Item {
             value: pillStatus.wifiFraction
             available: pillStatus.wifiKind !== "disconnected"
             glyph: pillStatus.wifiGlyph
-            nudgeY: unit.wifiDialNudgeY
             accent: Color.accent
             z: 3
             opacity: unit.pillStatusMode ? 1 : 0
@@ -2956,7 +2948,6 @@ Item {
             value: pillStatus.batteryFraction
             available: pillStatus.batteryPresent
             glyph: pillStatus.batteryPresent ? pillStatus.batteryGlyph : "󰂑"
-            nudgeY: unit.batteryDialNudgeY
             accent: Color.accent
             z: 3
             opacity: unit.pillStatusMode ? 1 : 0

@@ -17,10 +17,6 @@ Item {
   property string glyph: ""
   // Optional readout under the glyph (e.g. "87%"). Empty hides it.
   property string label: ""
-  // Debug-only vertical nudge for the centred content, in logical px
-  // (positive = down). 0 is production; the dial stays opt-in via the caller
-  // so a single ring can be tuned without moving the other.
-  property int nudgeY: 0
   property color accent: Color.accent
   property int diameter: Style.font.title + Style.space(10)
   property int arcWidth: Math.max(2, Math.round(diameter / 12))
@@ -68,7 +64,6 @@ Item {
 
   Column {
     anchors.centerIn: parent
-    anchors.verticalCenterOffset: root.nudgeY
     spacing: -Math.round(root.diameter * 0.04)
 
     Text {
