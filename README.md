@@ -156,7 +156,7 @@ Other runtime helpers the views use:
 
 ## Privilege boundary
 
-The plugin runs unsandboxed with your own user privileges. It does not use `sudo`, and it writes only the files described below.
+The plugin runs unsandboxed with your own user privileges. It does not use sudo or pkexec. It writes only the files described below.
 
 - **(a) Shell config** — the plugin writes `~/.config/omarchy/shell.json` only through the shell's `mutateShellConfig` API, never by hand-editing the file. All persisted keys (`bar.island*`, `bar.layout.*.islandHidden` / `islandPinned`, `bar.id`) go through that API, so the shell remains the single writer of the file.
 - **(b) Hyprland bindings** — the plugin writes `~/.config/hypr/bindings.lua` only through its own `hotkeys.sh`. The script renders one marked block bounded by `-- >>> angeeeld.omaltbar hotkeys` and `-- <<< angeeeld.omaltbar hotkeys`, keeps the rest of the file verbatim, and then runs `hyprctl reload`. Each managed bind is `hl.unbind`-ed immediately before it is bound, so a hand-written bind on the same key cannot fire twice. The script also refuses any key string that could break out of the Lua string literals.
