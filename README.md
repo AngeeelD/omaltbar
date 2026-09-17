@@ -105,15 +105,16 @@ omarchy plugin list | grep -i omaltbar
 
 # Geometry and state readout, then a journal filter on the exact shell process
 omarchy-shell omarchy.bar debugIslandGeometry | jq '{screen, displayScale, pillWidth, pillHeight}'
-PID=$(pgrep -x quickshell | head -n 1)
+PID=$(pgrep -x -o quickshell)
 journalctl --user _PID="$PID" --since "1 min ago" | grep -iE "TypeError|ReferenceError|Cannot read|VMEMetaObject" | grep -vE "hideTooltip|WidgetButton.qml|panels/audio/Panel.qml" | tail -n 30
 ```
 
 `pgrep -x quickshell` matches the process name exactly, so the recipe never resolves its own lookup
 subprocess; `journalctl --user _PID="$PID"` binds the query to that process through a journal field
-instead of matching its number as text. If more than one `quickshell` process exists, `head -n 1`
-picks the oldest, which is the long-lived shell. An empty result means the shell logged nothing in
-the window — not a failure.
+instead of matching its number as text. If more than one `quickshell` process exists, `-o` takes the
+oldest by start time, which is the long-lived shell; `head -n 1` would take the lowest-numbered PID
+instead, which is the same process only while PIDs have not wrapped. An empty result means the shell
+logged nothing in the window — not a failure.
 
 `VMEMetaObject` stays in the include and out of the exclude on purpose: the plugin's own teardown
 warnings are the class this recipe is meant to surface, at the cost of accepting shell-side noise of
@@ -154,9 +155,31 @@ Other runtime helpers the views use:
 | NetworkManager (via `Quickshell.Services`) / BlueZ | `QuickSettingsView` Wi-Fi/Bluetooth lists | Lists empty |
 | Hyprland (`Hyprland.focusedMonitor`, `hyprctl`) | `NotchIslandBar` per-screen units, `focusedScreenName`, debug geometry | Falls back to the first unit |
 
+### Shell-internal modules (hard coupling, not optional)
+
+The island replaces the system bar, so it reuses the shell's own layout and data helpers verbatim instead of vendoring copies that would drift from upstream. Seven shell-internal modules are imported by **absolute file URL**, across eleven imports in seven files:
+
+| Module | Imported by |
+|--------|-------------|
+| `shell/plugins/bar/BarModel.js` | `NotchIslandBar.qml`, `IslandWidgets.qml` |
+| `shell/plugins/panels/audio/Model.js` | `QuickSettingsView.qml` |
+| `shell/plugins/panels/network/Model.js` | `QuickSettingsView.qml`, `PillStatusSource.qml` |
+| `shell/plugins/panels/bluetooth/Model.js` | `QuickSettingsView.qml` |
+| `shell/plugins/panels/power/Model.js` | `QuickSettingsView.qml`, `PillStatusSource.qml` |
+| `shell/plugins/panels/weather/Model.js` | `ClockWeatherView.qml` |
+| `shell/plugins/notifications/NotificationLogic.js` | `NotificationsView.qml`, `NotificationToastView.qml` |
+
+Unlike every dependency above, this one is **not** optional, and three consequences are worth knowing before an Omarchy update:
+
+- **The root is hardcoded.** The imports name `/usr/share/omarchy/...` literally, while the shell derives its own root from `OMARCHY_PATH` (`shell.qml:27-28`). An installation where `OMARCHY_PATH` points elsewhere does not resolve them.
+- **No runtime guard is possible.** QML resolves a static `import` at compile time, so a `typeof` or existence check is never reached when the import fails. Guarding would mean loading the helpers dynamically through a computed URL.
+- **The failure is honest, not a crash.** The bar option fails to load, the shell logs `failed to load, falling back to omarchy.bar` and renders the stock bar (`shell.qml:175-184`, `:256-262`); the island simply does not appear. If an Omarchy update relocates or renames one of these modules, the plugin degrades to the stock bar until the import is updated.
+
+Vendoring the seven modules is the alternative. It buys immunity to relocation at the cost of silent drift — the copies stop matching the bar they exist to share, which is the outcome the comment in `IslandWidgets.qml` deliberately avoids.
+
 ## Privilege boundary
 
-The plugin runs unsandboxed with your own user privileges. It does not use `sudo`, and it writes only the files described below.
+The plugin runs unsandboxed with your own user privileges. It never escalates privileges, and it writes only the files described below.
 
 - **(a) Shell config** — the plugin writes `~/.config/omarchy/shell.json` only through the shell's `mutateShellConfig` API, never by hand-editing the file. All persisted keys (`bar.island*`, `bar.layout.*.islandHidden` / `islandPinned`, `bar.id`) go through that API, so the shell remains the single writer of the file.
 - **(b) Hyprland bindings** — the plugin writes `~/.config/hypr/bindings.lua` only through its own `hotkeys.sh`. The script renders one marked block bounded by `-- >>> angeeeld.omaltbar hotkeys` and `-- <<< angeeeld.omaltbar hotkeys`, keeps the rest of the file verbatim, and then runs `hyprctl reload`. Each managed bind is `hl.unbind`-ed immediately before it is bound, so a hand-written bind on the same key cannot fire twice. The script also refuses any key string that could break out of the Lua string literals.

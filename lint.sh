@@ -14,8 +14,12 @@
 # findings. The script links the two module directories into a throwaway root
 # shaped like the URIs (`qs/Commons`, `qs/Ui`) and lints through that. Nothing is
 # written under /usr/share: the temporary root holds symlinks only and is removed
-# on exit. With the modules resolved the run is 886 findings — the documented
-# 880-warning baseline plus six import infos (see docs/linting.md).
+# on exit. With the modules resolved the run is always 886 findings, and because
+# the two categories below are pinned to `info` this script prints exactly
+# `10 warning(s), 876 info(s)` — the counts tabulated in docs/linting.md. Reading
+# the same 886 under Qt's default levels is where an "880 warning" figure comes
+# from (the 870 pinned findings rejoin the 10 real ones); that is the unpinned
+# reading, not this script's output.
 #
 #   bash lint.sh
 #
@@ -35,7 +39,10 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PINNED_CATEGORY_FLAGS=(--unqualified=info --missing-property=info)
 
 # Global on purpose: the EXIT trap must see it after main() returns, where a
-# `local` would already be out of scope.
+# `local` would already be out of scope. The trap also fires on SIGINT and
+# SIGTERM, so an interrupted or timed-out run still cleans up. Only SIGKILL
+# cannot be trapped: it leaves the temporary root on disk, where tmpfiles
+# reclaims it on reboot.
 IMPORT_ROOT=""
 cleanup() {
   [[ -z $IMPORT_ROOT ]] || rm -rf "$IMPORT_ROOT"
@@ -46,11 +53,13 @@ fail() {
   exit 1
 }
 
-# Every QML file in the repository, sorted for a stable report. Top-level dot
-# directories (.git and the agent trails) are pruned; the absolute REPO_DIR path
-# itself contains dot directories, so the prune is anchored to the repo root.
+# Every QML file in the repository, sorted for a stable report. Dot directories
+# are pruned at any depth (.git, the agent trails, any nested scratch dir),
+# matched by basename rather than by path: REPO_DIR itself lives under dot
+# directories (.config, …), so a path-shaped match would prune the whole
+# repository the moment it matched an ancestor.
 qml_files() {
-  find "$REPO_DIR" -path "$REPO_DIR/.*" -prune -o -name '*.qml' -print | sort
+  find "$REPO_DIR" -name '.*' -prune -o -name '*.qml' -print | sort
 }
 
 main() {
