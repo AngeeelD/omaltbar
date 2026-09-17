@@ -3154,6 +3154,19 @@ Item {
           unit.islandState.pageNext()
           event.accepted = true
         }
+        // Guarded Down entry into the theme picker. Same shape as the Left/Right
+        // pair above: an unaccepted key just falls through. The island must be
+        // open, and the picker must not already be showing — its field and strip
+        // accept their own arrow keys, so a Down that reaches this handler means
+        // the picker is not up. `setContext` makes it a manual context, which is
+        // what keeps it out of ContextResolver.pageIds.
+        Keys.onDownPressed: function(event) {
+          if (!unit.islandState.expanded) return
+          if (unit.islandState.displayedContext === "island.themeSwitcher") return
+          unit.markInteraction()
+          unit.islandState.setContext("island.themeSwitcher")
+          event.accepted = true
+        }
       }
     }
   }

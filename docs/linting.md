@@ -54,22 +54,25 @@ comparable between runs — it is the *invocation*, not the toolchain, that prod
 
 ## Baseline
 
-Measured with `bash lint.sh` on Qt **6.11.2** against the installed omarchy shell, over the 24 QML
+Measured with `bash lint.sh` on Qt **6.11.2** against the installed omarchy shell, over the 26 QML
 files in this repository:
 
 | Category | Findings | Level under `lint.sh` |
 |----------|----------|----------------------|
-| `[unqualified]` | 439 | `info` (pinned) |
-| `[missing-property]` | 431 | `info` (pinned) |
+| `[unqualified]` | 459 | `info` (pinned) |
+| `[missing-property]` | 448 | `info` (pinned) |
 | `[unused-imports]` | 6 | `info` (Qt default) |
 | `[unresolved-type]` | 5 | `warning` (Qt default) |
 | `[signal-handler-parameters]` | 3 | `warning` (Qt default) |
 | `[uncreatable-type]` | 2 | `warning` (Qt default) |
-| **total** | **886** | 876 info + 10 warning |
+| **total** | **923** | 913 info + 10 warning |
 
-A run matches the baseline when it prints `summary: 10 warning(s), 876 info(s)` and the same
+A run matches the baseline when it prints `summary: 10 warning(s), 913 info(s)` and the same
 per-category counts. The finding set is expected to be stable; the file paths are absolute and will
-differ between checkouts, the counts will not.
+differ between checkouts, the counts will not. The counts move only when the file set moves: the
+24 → 26 files above are the theme picker (`ThemePalette.qml`, `views/ThemeSwitcherView.qml`), which
+added `[unqualified]` and `[missing-property]` findings in proportion to the new lines and left the
+10 warnings untouched.
 
 ### Residual noise
 

@@ -1,7 +1,7 @@
 # Views Reference
 
 Topic-scoped reference for the island's native views: every file under `views/`
-(11 files, 4,273 lines) with what it renders, the context id that mounts it, and
+(12 files, 4,723 lines) with what it renders, the context id that mounts it, and
 how a reader interacts with it. Everything here is derived statically from the
 QML source, and each row carries a `File.qml:line` citation so it can be
 re-checked with `grep -n`.
@@ -12,7 +12,7 @@ does not restate them. For the shape of the bar and which context each view
 occupies, read [Architecture](architecture.md).
 
 Mounting is declared once, in the `Component.onCompleted` block at
-`DynamicIsland.qml:575-588`: 14 registrations across 11 views. The table below is
+`DynamicIsland.qml:575-593`: 15 registrations across 12 views. The table below is
 ordered the way that block registers them. The mapping reads both ways — a view
 lists every context id that mounts it, and a context id names its view.
 
@@ -29,6 +29,7 @@ lists every context id that mounts it, and a context id names its view.
 | `views/ScreenRecordingView.qml` | 90 | The recording's target filename and a stop action | `island.screenrecord` (`DynamicIsland.qml:586`) | Stop button |
 | `views/NotificationsView.qml` | 878 | Live popup rows plus the archived history list, per-app icons, relative times and the DND toggle | `jankeesvw.notification-center` (`DynamicIsland.qml:587`) | Row tap runs the default action, live action buttons, dismiss/delete, clear all, DND |
 | `views/NotificationToastView.qml` | 531 | Toast snapshot cards only — no history, no archive mixing | `island.notificationToast` (`DynamicIsland.qml:588`) | Card-body tap runs the default action, live action buttons, dismiss |
+| `views/ThemeSwitcherView.qml` | 450 | Theme picker: a live-filtering search field over a horizontal card carousel, each card carrying 8 resolved palette dots, a title-cased label and a `position/total` counter, plus the apply status line | `island.themeSwitcher` (`DynamicIsland.qml:593`) | Type to filter, Enter applies the match the filter aimed at; Down/Tab reaches the strip, Left/Right (or `h`/`l`) walk it, Up returns to the field, Enter applies optimistically; a click selects |
 
 The three heaviest views carry the detail the table cannot: what they render
 beyond the headline, and how a reader interacts with them.
