@@ -23,7 +23,7 @@ omarchy-shell omarchy.bar debugIslandGeometry | jq '{displayScale, notchScale, p
 Filter by the **new** shell PID only — old PID lines are stale:
 
 ```bash
-PID=$(pgrep -x quickshell | head -n 1); echo "$PID"
+PID=$(pgrep -x -o quickshell); echo "$PID"
 journalctl --user _PID="$PID" --since "2 min ago" | tail -n 80
 ```
 
@@ -38,6 +38,8 @@ omarchy-shell omarchy.bar debugIslandGeometry | jq '{expanded, displayedContext,
 ```
 
 Known benign teardown noise (not this plugin): a burst of `QQmlVMEMetaObject: Internal error - attempted to evaluate a function in an invalid context`, `@Ui/WidgetButton.qml ... hideTooltip is not a function` and `panels/audio/Panel.qml ... Cannot read property 'foreground' of null` whenever the island's view `Loader` swaps or tears down. They are `WARN`-level only and are not caused by this plugin: an attribution pass reproduced none of them across a controlled shell restart, traced the `barConfig` binding loop to shell-side wiring (`/usr/share/omarchy/shell/shell.qml:115`, no plugin frame) and attributed part of the historical `QQmlVMEMetaObject` lines to another plugin's `TypeError`. The verify recipe lists them on purpose (see the note in the README), so a regression stays visible instead of being filtered away.
+
+The duplicate-handler warning belongs to the same class. `QML IpcHandler ... another handler is registered for target <id>` appears for this plugin's `angeeeld.omaltbar.settings` and, in the same instant of one measured reload, for `omarchy.network`, `omarchy.bluetooth`, `omarchy.weather`, `omarchy.audio`, `omarchy.tailscale` and every other widget that was live — twelve targets at once, first-party panels included. The shell documents the cause in its own source: a load already in flight for a widget URL registers itself when it finishes, and swapping a slot's component rebuilds its item, so two copies of the widget briefly run and each registers an IPC handler (`/usr/share/omarchy/shell/shell.qml:704-708`). No plugin-side configuration prevents it, the first registration wins, and the documented `angeeeld.omaltbar.settings` commands keep working. Two apparent fixes are wrong and were measured to be wrong: dropping `entryPoints.barWidget` costs marketplace discoverability and does not silence the warning, because that path only *registers* a component and never instantiates one (`shell.qml:790-814`, `BarWidgetRegistry.qml:16-25`); and giving each instance its own `ipcTarget` breaks the CLI target documented in the README. This plugin's own layout carries a single `bar.layout` entry for the settings widget, so the duplicate is never its own.
 
 **Hot-reload didn't apply**
 Expected. `rescanPlugins` + `Qt.clearComponentCache` can serve a stale bar. Always:
