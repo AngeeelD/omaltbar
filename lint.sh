@@ -14,8 +14,12 @@
 # findings. The script links the two module directories into a throwaway root
 # shaped like the URIs (`qs/Commons`, `qs/Ui`) and lints through that. Nothing is
 # written under /usr/share: the temporary root holds symlinks only and is removed
-# on exit. With the modules resolved the run is 886 findings — the documented
-# 880-warning baseline plus six import infos (see docs/linting.md).
+# on exit. With the modules resolved the run is always 886 findings, and because
+# the two categories below are pinned to `info` this script prints exactly
+# `10 warning(s), 876 info(s)` — the counts tabulated in docs/linting.md. Reading
+# the same 886 under Qt's default levels is where an "880 warning" figure comes
+# from (the 870 pinned findings rejoin the 10 real ones); that is the unpinned
+# reading, not this script's output.
 #
 #   bash lint.sh
 #
