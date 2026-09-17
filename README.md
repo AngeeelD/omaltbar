@@ -155,6 +155,28 @@ Other runtime helpers the views use:
 | NetworkManager (via `Quickshell.Services`) / BlueZ | `QuickSettingsView` Wi-Fi/Bluetooth lists | Lists empty |
 | Hyprland (`Hyprland.focusedMonitor`, `hyprctl`) | `NotchIslandBar` per-screen units, `focusedScreenName`, debug geometry | Falls back to the first unit |
 
+### Shell-internal modules (hard coupling, not optional)
+
+The island replaces the system bar, so it reuses the shell's own layout and data helpers verbatim instead of vendoring copies that would drift from upstream. Seven shell-internal modules are imported by **absolute file URL**, across eleven imports in seven files:
+
+| Module | Imported by |
+|--------|-------------|
+| `shell/plugins/bar/BarModel.js` | `NotchIslandBar.qml`, `IslandWidgets.qml` |
+| `shell/plugins/panels/audio/Model.js` | `QuickSettingsView.qml` |
+| `shell/plugins/panels/network/Model.js` | `QuickSettingsView.qml`, `PillStatusSource.qml` |
+| `shell/plugins/panels/bluetooth/Model.js` | `QuickSettingsView.qml` |
+| `shell/plugins/panels/power/Model.js` | `QuickSettingsView.qml`, `PillStatusSource.qml` |
+| `shell/plugins/panels/weather/Model.js` | `ClockWeatherView.qml` |
+| `shell/plugins/notifications/NotificationLogic.js` | `NotificationsView.qml`, `NotificationToastView.qml` |
+
+Unlike every dependency above, this one is **not** optional, and three consequences are worth knowing before an Omarchy update:
+
+- **The root is hardcoded.** The imports name `/usr/share/omarchy/...` literally, while the shell derives its own root from `OMARCHY_PATH` (`shell.qml:27-28`). An installation where `OMARCHY_PATH` points elsewhere does not resolve them.
+- **No runtime guard is possible.** QML resolves a static `import` at compile time, so a `typeof` or existence check is never reached when the import fails. Guarding would mean loading the helpers dynamically through a computed URL.
+- **The failure is honest, not a crash.** The bar option fails to load, the shell logs `failed to load, falling back to omarchy.bar` and renders the stock bar (`shell.qml:175-184`, `:256-262`); the island simply does not appear. If an Omarchy update relocates or renames one of these modules, the plugin degrades to the stock bar until the import is updated.
+
+Vendoring the seven modules is the alternative. It buys immunity to relocation at the cost of silent drift — the copies stop matching the bar they exist to share, which is the outcome the comment in `IslandWidgets.qml` deliberately avoids.
+
 ## Privilege boundary
 
 The plugin runs unsandboxed with your own user privileges. It never escalates privileges, and it writes only the files described below.
