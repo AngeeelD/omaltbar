@@ -58,9 +58,9 @@ What it renders, block by block:
 - **Bluetooth** (`:561-714`) — a toggle plus the device list, wired to the exact
   calls the first-party Bluetooth panel makes, including power and per-device
   connect/disconnect.
-- **Power** (`:715-1154`) — power-profile pills and the battery block, hidden or
+- **Power** (`:715-791`) — power-profile pills and the battery block, hidden or
   read-only when the backend is missing.
-- **Excluded controls** (`:1336-` end) — the default page's deck controls can be
+- **Excluded controls** (`:1336-1431`) — the default page's deck controls can be
   dragged out and restored from the collapsible "Excluded (N)" header, reusing
   the widget grid's exact drag vocabulary (`:47-57`).
 
