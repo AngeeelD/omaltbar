@@ -20,6 +20,9 @@ Item {
   property int maxWidth: 320
   // Diameter of one sphere; the mount overrides it with 80% of the pill height.
   property int sphereSize: Style.font.title + Style.space(10)
+  // Session visibility of the circles beside the pill, toggled by the pill's
+  // RIGHT click together with the indicator row: the two runs are one set.
+  property bool circlesVisible: true
   // App icon as a fraction of the bubble. 0.58 was the ratio before the spheres
   // grew; the icon now sits at 80% of that, matching the indicator circles.
   readonly property real iconRatio: 0.58 * 0.8
@@ -37,17 +40,40 @@ Item {
   readonly property string selectedAppId:
     root.windowSource ? String(root.windowSource.selectedAppId || "") : ""
 
-  // A sphere click selects the app and opens the one context that renders its
-  // windows. Selection is kept on the source so the view and the row agree.
+  // A sphere click:
+  //   * exactly one window -> focus it immediately and do NOT open the island
+  //     (the common "switch to my one Chrome window" case must stay a single
+  //     click); the shared WindowSource.focusToplevel owns the command;
+  //   * two or more windows -> select the app and open the window-list context.
+  // A single-window group whose address is invalid focuses nothing and opens
+  // nothing (the guard aborts before any command runs) — it never falls back
+  // to opening the list, which would contradict the one-window contract.
   function openWindows(appId) {
     var id = String(appId || "")
     if (id === "" || !root.windowSource || !root.islandState) return
+    var group = root.groupFor(id)
+    if (group && group.windows && group.windows.length === 1) {
+      root.windowSource.focusToplevel(group.windows[0])
+      return
+    }
     root.windowSource.selectedAppId = id
-    root.islandState.setContext("island.windowList")
+    // byClick: this is a click-opened island, so the hover lock engages and the
+    // body may take the keyboard for ESC / arrows / digits.
+    root.islandState.setContext("island.windowList", true)
+  }
+
+  // The group whose appId matches, from the same appGroups the delegates render.
+  function groupFor(appId) {
+    var list = root.groups
+    for (var i = 0; i < list.length; i++)
+      if (String(list[i].appId) === String(appId)) return list[i]
+    return null
   }
 
   width: Math.min(flick.contentWidth, root.maxWidth)
   height: root.sphereSize
+  // Hidden when the pill's RIGHT-click toggle hides the circles (row + spheres).
+  visible: root.circlesVisible
 
   // Hidden while the island is open: opacity and scale animate together, and
   // the disabled root refuses clicks (and wheel events), so the faded-out run

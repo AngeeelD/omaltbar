@@ -47,6 +47,22 @@ Item {
   // Non-paged context: "" -> home view, a native view id, or a grid sentinel.
   property string manualContext: ""
 
+  // --- click-opened island: hover lock + keyboard ownership ----------------
+  // True while the island was opened by a click (an indicator circle, an app
+  // sphere) rather than by hover, a hotkey or an automatic appearance. While
+  // it is set the pointer must not expand/collapse the island nor change the
+  // displayed context, and the body surface is allowed to take the keyboard so
+  // ESC / arrows / digits work. It is cleared by collapse() and by any
+  // hover-owned open (openResolved / reveal), which is exactly when normal
+  // hover behaviour must resume.
+  property bool clickOpened: false
+
+  // The interaction that opened the island with a click. Kept separate from
+  // clickOpened so a context's own dismissal can clear the lock without losing
+  // which gesture owned it; currently only "island.windowList" uses it, but the
+  // flag is deliberately generic so more click-opened contexts can join.
+  property string clickOpenedContext: ""
+
   // The context the router renders when no transient overlay is up.
   readonly property string activeContext: {
     if (!root.paging) return root.manualContext
@@ -196,6 +212,10 @@ Item {
     // steal keyboard focus; explicit ones (dwell, hotkey) may.
     root.autoOpened = automatic === true
     root.revealSide = ""
+    // A hover/hotkey open is not the click-opened mode: release its lock so the
+    // pointer regains control of this island.
+    root.clickOpened = false
+    root.clickOpenedContext = ""
     // With a transient live, expand BEFORE writing the page. The body Loader
     // picks its component from displayedContext, which is the transient while one
     // is live and the page otherwise — but `transientVisible` requires `expanded`.
@@ -294,6 +314,8 @@ Item {
     root.revealSide = next
     root.paging = false
     root.autoOpened = false
+    root.clickOpened = false
+    root.clickOpenedContext = ""
     var context = root.gridContextFor(next)
     if (root.manualContext !== context) root.manualContext = context
     root.expanded = true
@@ -339,19 +361,27 @@ Item {
     root.nativeViews = next
   }
 
-  function setContext(contextId) {
+  // Open a manual context. `byClick` marks a click-opened island (an indicator
+  // circle or an app sphere): it engages the hover lock and lets the body take
+  // the keyboard for ESC / arrows / digits. Hotkeys and widget-icon clicks
+  // leave it false and keep the normal hover policy.
+  function setContext(contextId, byClick) {
     // A manual view replaces whatever reveal the pointer was holding open and
     // leaves paging, so the carousel never fights an explicit icon click.
     root.revealSide = ""
     root.paging = false
     root.autoOpened = false
     root.manualContext = String(contextId || "")
+    root.clickOpened = byClick === true
+    root.clickOpenedContext = root.clickOpened ? root.manualContext : ""
     root.expanded = true
   }
 
   function collapse() {
     root.soloWidgetId = ""
     root.autoOpened = false
+    root.clickOpened = false
+    root.clickOpenedContext = ""
     root.expanded = false
     root.paging = false
     root.manualContext = ""

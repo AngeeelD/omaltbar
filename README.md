@@ -196,7 +196,7 @@ The plugin runs unsandboxed with your own user privileges. It never escalates pr
 | External (DDC) display brightness: the sysfs watcher covers the internal panel only; an external monitor's change is seen by the 15s safety poll | `BrightnessState` | KNOWN LIMITATION |
 | Pointer-only checks — hover promotion (compact strip → player + pager), the settings dialog's Escape/Enter, dragging the timing sliders, and the doctor's amber path (break something on purpose) | `SettingsWidget`, `SettingsPanel`, `SettingsDoctor` | PENDING — needs a real pointer; `omarchy-shell omarchy.bar debugMediaPeek` / `debugPromote` / `debugLastPage <id>` exercise the state machine without one |
 | Pointer-only checks for the APPEARANCE sliders (opacity, pill length) and the pill-form toggle in the panel. The toast CLICK is already verified (a real click ran a test toast's `--exec`) | `SettingsPanel`, `NotchIslandBar` | PENDING — needs a real pointer for the drags; the form and the length are verifiable from a shell (`debugIslandGeometry`, `pillCompact` / `pillWidth`) |
-| Dial nudge debug knobs — `wifiDialNudgeY` / `batteryDialNudgeY` (`IslandUnit`) and `PillStatusDial.nudgeY` tune the battery glyph centring; both sit at `0` now | `NotchIslandBar`, `PillStatusDial` | CLEANUP — remove when the centring is settled |
+| Dial nudge debug knob — `PillStatusDial.nudgeY` tunes the centred glyph's vertical offset; it sits at `0` now | `PillStatusDial` | CLEANUP — remove when the centring is settled |
 
 ## Documentation
 
