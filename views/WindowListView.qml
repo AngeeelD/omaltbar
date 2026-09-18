@@ -56,31 +56,21 @@ Item {
     return root.windowSource.iconFor(root.windowSource.appIdFor(toplevel))
   }
 
-  // Collapse first, then focus: the proven reference sleeps ~0.2 s so the
-  // layer surface unmaps before the compositor takes the focus. An invalid or
-  // empty address aborts the whole action — no command is ever executed.
+  // The focus command must outlive this view: collapse() clears
+  // DynamicIsland.activeComponent, which destroys the view and any Timer
+  // declared inside it. So the ~0.2 s delay that lets the layer surface unmap
+  // before the compositor takes focus is owned by a detached process — the
+  // proven expose `activate-window` shape — spawned before the collapse. An
+  // invalid or empty address aborts the whole action: no command is executed.
   function focusWindow(toplevel) {
     if (!root.windowSource) return
     var address = root.windowSource.addressFor(toplevel)
     if (address === "") return
+    Quickshell.execDetached([
+      "sh", "-c",
+      "sleep 0.2; hyprctl eval \"hl.dispatch(hl.dsp.focus({ window = 'address:" + address + "' }))\""
+    ])
     if (root.islandState) root.islandState.collapse()
-    focusTimer.address = address
-    focusTimer.restart()
-  }
-
-  Timer {
-    id: focusTimer
-    property string address: ""
-    interval: 200
-    onTriggered: {
-      var target = focusTimer.address
-      focusTimer.address = ""
-      if (target === "") return
-      Quickshell.execDetached([
-        "hyprctl", "eval",
-        "hl.dispatch(hl.dsp.focus({ window = 'address:" + target + "' }))"
-      ])
-    }
   }
 
   Column {
