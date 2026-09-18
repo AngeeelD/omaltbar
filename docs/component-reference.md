@@ -146,9 +146,12 @@ Its whole round trip is traceable through this file:
 
 ## Indicator row and app spheres
 
-Two static surfaces sit beside the notch pill. Both are mounted as siblings of
-the notch body inside `pillContent` (`NotchIslandBar.qml:3049-3080`), anchored
-to the strip rather than to the animated pill wing, so a click target never
+Two static surfaces sit beside the notch pill: the app spheres immediately to
+its left, the indicator row immediately to its right. Both are mounted as
+siblings of the notch body inside `pillContent` (`NotchIslandBar.qml:3069-3099`)
+and parked against the pill's **resting** edges (`unit.pillLeftEdge` /
+`unit.pillRightEdge`, computed from the resolved `unit.pillWidth` and the
+screen width), never against the animated wing formula — so a click target never
 moves when an open island retracts the pill under the pointer. Both are
 click-only: the dwell/hover policy belongs to another change, so neither adds a
 hover handler.
@@ -169,8 +172,11 @@ circle opens a context through `IslandState.setContext`:
 The role mapping lives on the row (`PillIndicatorRow.contextForRole`), so the
 dial stays a dumb painter: it gained a `role` property and a bare `TapHandler`
 that emits `clicked(role)` and owns no activation logic
-(`PillStatusDial.qml:29-33`, handler at `:102`). The painting itself is
-untouched.
+(`PillStatusDial.qml:29-33`, handler at `:113`). Its painting gained one filled
+circle behind the ring — a `Color.bar.background` bubble (the pill's own surface)
+with the glyph and the label in `accent` — which is what makes a circle read as a
+small pill and gives the accent the contrast it needs
+(`PillStatusDial.qml:40-52`).
 
 `PillStatusSource.qml` gained the two new sources behind those circles:
 Bluetooth (`btState`, from the BlueZ adapter and its devices,
@@ -194,10 +200,13 @@ RIGHT now toggles the indicator row instead:
 
 ### App spheres and the window-list context
 
-`PillAppSpheres.qml` is the static row on the left: one circle per app with a
-window on this screen, alphabetical, inside a horizontal `Flickable` whose wheel
-event is accepted so it never reaches the collapse/peek policy. A sphere click
-sets `WindowSource.selectedAppId` and opens `island.windowList`
+`PillAppSpheres.qml` is the static row parked immediately left of the pill and
+growing leftwards: one circle per app with a window on this screen, alphabetical,
+inside a horizontal `Flickable` whose wheel event is accepted so it never reaches
+the collapse/peek policy. Each sphere is a filled `Color.bar.background` bubble —
+the pill's own surface, so it stays legible over any wallpaper — with the
+selected app rimmed in `accent`. A sphere click sets
+`WindowSource.selectedAppId` and opens `island.windowList`
 (`PillAppSpheres.qml:33`).
 
 `WindowSource.qml` is the single per-screen reader those surfaces share. It
