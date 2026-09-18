@@ -2649,19 +2649,31 @@ Item {
     // status dials anchor with it.
     readonly property int restTimeInset: Math.max(1, Math.round(Style.space(12) * unit.invScale))
 
+    // The pill's RESTING edges, from its configured width centred on the strip.
+    // Deliberately not the animated wing formula: the indicator row and the app
+    // spheres are parked beside where the pill rests, so their click targets
+    // never move when an open island retracts the pill under the pointer.
+    readonly property int pillLeftEdge:
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 - unit.pillWidth / 2)
+    readonly property int pillRightEdge:
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 + unit.pillWidth / 2)
+    // Visual gap between the pill and the circles parked beside it.
+    readonly property int besidePillGap: Style.space(8)
+
     // The expose plugin parks a 68x68 click-swallowing "hot corner" layer
-    // surface at (0,0) ABOVE the island's layer, so the left-anchored spheres
-    // start clear of it (plus a small gap) or their first circles could never
-    // be clicked. Named here, not inline, because it is a foreign surface's
-    // geometry, not the island's.
+    // surface at (0,0) ABOVE the island's layer, so the spheres stay clear of it
+    // (plus a small gap) or their first circles could never be clicked. Named
+    // here, not inline, because it is a foreign surface's geometry, not the
+    // island's.
     readonly property int hotCornerClearance: 68 + Style.space(8)
     readonly property int sphereLeftInset: Math.max(unit.restTimeInset, unit.hotCornerClearance)
     // Usable run for the spheres: from their left inset to just short of the
-    // pill's left edge, so the two static surfaces can never overlap.
+    // pill's left edge, so the two static runs can never overlap. The spheres
+    // are right-anchored to the pill and grow leftwards into this run.
     readonly property int sphereMaxWidth: {
       if (!unit.hostScreen) return Style.space(80)
-      var pillLeft = Math.round(unit.hostScreen.width / 2 - unit.pillWidth / 2)
-      return Math.max(Style.space(80), pillLeft - unit.sphereLeftInset - unit.restTimeInset)
+      return Math.max(Style.space(80),
+        unit.pillLeftEdge - unit.besidePillGap - unit.sphereLeftInset)
     }
 
     // Zone under a point inside the pill: "left" | "right" | "bottom".
@@ -3054,30 +3066,32 @@ Item {
 
         }
 
-        // App spheres: static left-anchored sibling of the notch body, same
-        // rationale as the indicator row below. The left margin clears the
-        // expose hot corner (see hotCornerClearance); the usable run stops
-        // before the pill so the two never overlap.
+        // App spheres: parked immediately LEFT of the pill and growing
+        // leftwards. Anchored to the pill's RESTING edge (see pillLeftEdge), not
+        // to the animated wing, so their click targets never move when an open
+        // island retracts the pill under the pointer. The run stops clear of the
+        // expose hot corner (sphereLeftInset) and never overlaps the pill.
         PillAppSpheres {
           id: appSpheres
           anchors.verticalCenter: parent.verticalCenter
-          anchors.left: parent.left
-          anchors.leftMargin: unit.sphereLeftInset
+          anchors.right: parent.right
+          anchors.rightMargin: parent.width - unit.pillLeftEdge + unit.besidePillGap
           maxWidth: unit.sphereMaxWidth
           windowSource: unit.windowSource
           islandState: unit.islandState
           z: 3
         }
 
-        // Indicator row: a static right-anchored sibling of the notch body.
-        // Anchored to the strip, not to the animated wing, so its click targets
-        // never move when an open island retracts the pill under the pointer.
-        // Horizontal growth only — the surface stays 64 px tall.
+        // Indicator row: parked immediately RIGHT of the pill and growing
+        // rightwards. Anchored to the pill's RESTING edge, never to the animated
+        // wing, so its click targets cannot move when an open island retracts the
+        // pill under the pointer. Horizontal growth only — the surface stays 64
+        // px tall.
         PillIndicatorRow {
           id: indicatorRow
           anchors.verticalCenter: parent.verticalCenter
-          anchors.right: parent.right
-          anchors.rightMargin: unit.restTimeInset
+          anchors.left: parent.left
+          anchors.leftMargin: unit.pillRightEdge + unit.besidePillGap
           statusSource: pillStatus
           islandState: unit.islandState
           rowVisible: unit.rowVisible
