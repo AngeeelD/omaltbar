@@ -144,6 +144,90 @@ Its whole round trip is traceable through this file:
   plugin load and watches `~/.local/state/omarchy/current/theme.name`. The apply
   path is `omarchy-theme-set <name>`, reconciled against that watcher.
 
+## Indicator row and app spheres
+
+Two static surfaces sit beside the notch pill. Both are mounted as siblings of
+the notch body inside `pillContent` (`NotchIslandBar.qml:3049-3080`), anchored
+to the strip rather than to the animated pill wing, so a click target never
+moves when an open island retracts the pill under the pointer. Both are
+click-only: the dwell/hover policy belongs to another change, so neither adds a
+hover handler.
+
+### Indicator row
+
+`PillIndicatorRow.qml` is the always-visible row on the right of the pill. It
+renders four `PillStatusDial` circles from one `PillStatusSource`, and each
+circle opens a context through `IslandState.setContext`:
+
+| circle / role | source reading | context opened |
+|---|---|---|
+| battery (`power`) | `batteryFraction` / `batteryPresent` | `omarchy.power` |
+| Wi-Fi (`network`) | `wifiFraction` / `wifiKind` | `omarchy.network` |
+| Bluetooth (`bluetooth`) | `btState.fraction` / `btState.available` | `omarchy.bluetooth` |
+| music meter (`media`) | `meterState.level`, and the dial is absent while `meterState.playing` is false | `omarchy.media` |
+
+The role mapping lives on the row (`PillIndicatorRow.contextForRole`), so the
+dial stays a dumb painter: it gained a `role` property and a bare `TapHandler`
+that emits `clicked(role)` and owns no activation logic
+(`PillStatusDial.qml:29-33`, handler at `:102`). The painting itself is
+untouched.
+
+`PillStatusSource.qml` gained the two new sources behind those circles:
+Bluetooth (`btState`, from the BlueZ adapter and its devices,
+`PillStatusSource.qml:112`) and the music meter (`meterState`, MPRIS transport
+plus the PipeWire default sink's live peak, `PillStatusSource.qml:147`).
+
+### Pill gesture pair
+
+`bar.islandInvertPillClicks` still swaps two clicks, but the pair changed. The
+retired template swap — `togglePillTemplate()`, the session-only
+`pillStatusMode` and the two in-pill `PillStatusDial` instances — is gone, and
+RIGHT now toggles the indicator row instead:
+
+| `bar.islandInvertPillClicks` | RIGHT click | LEFT click |
+|---|---|---|
+| `false` | toggles the indicator row (`toggleRow()`, session) | pins the compact dot (`togglePillCompact()`, persists `bar.islandPillCompact`) |
+| `true` | pins the compact dot | toggles the indicator row |
+
+`rowVisible` is session-only and defaults to `true`
+(`NotchIslandBar.qml:1870`); no `bar.*` key was added.
+
+### App spheres and the window-list context
+
+`PillAppSpheres.qml` is the static row on the left: one circle per app with a
+window on this screen, alphabetical, inside a horizontal `Flickable` whose wheel
+event is accepted so it never reaches the collapse/peek policy. A sphere click
+sets `WindowSource.selectedAppId` and opens `island.windowList`
+(`PillAppSpheres.qml:33`).
+
+`WindowSource.qml` is the single per-screen reader those surfaces share. It
+projects `Hyprland.toplevels` (event-driven; no polling), groups by
+`Wayland Toplevel.appId` with the `lastIpcObject.class || initialClass`
+fallback, filters to the unit's `hostScreen.name`, and resolves icons through
+`DesktopEntries` with the generic executable fallback
+(`WindowSource.qml:104`). `addressFor(toplevel)` returns `0x`-prefixed hex only
+after validating the bare address against `/^[0-9a-fA-F]+$/`; an empty return
+means the focus action must not run (`WindowSource.qml:75`).
+
+`island.windowList` is a **manual context, not a page**: it is deliberately not
+added to `ContextResolver.pageIds`, so it never joins the carousel and never
+becomes the entry page. The round trip is:
+
+1. **Entry** — a sphere click selects the app and calls
+   `IslandState.setContext("island.windowList")` (`PillAppSpheres.qml:33`).
+2. **Render** — `DynamicIsland` registers `views/WindowListView.qml` for that
+   id (`DynamicIsland.qml:602`), and the router loads it through
+   `IslandState.nativeViewFor`.
+3. **Live previews** — a card's `ScreencopyView` is live only while this context
+   is the one shown and the view is laid out (`views/WindowListView.qml:34`); a
+   capture with no content shows "Preview unavailable" while the icon and title
+   stay.
+4. **Exit / focus** — a card tap collapses the island, waits the reference's
+   ~0.2 s for the layer surface to unmap, then runs
+   `hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:0x…' }))"`
+   (`views/WindowListView.qml:62`). The Lua dispatcher form is the one this
+   Hyprland's config mode uses.
+
 ## Context resolution
 
 `ContextResolver.qml` decides which contexts are alive, the order the island
