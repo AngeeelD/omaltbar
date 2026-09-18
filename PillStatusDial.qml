@@ -20,6 +20,13 @@ Item {
   property color accent: Color.accent
   property int diameter: Style.font.title + Style.space(10)
   property int arcWidth: Math.max(2, Math.round(diameter / 12))
+  // Stable click identifier (e.g. "power", "network"), never a context id: the
+  // caller decides what a role opens, the dial only reports the click.
+  property string role: ""
+
+  // Emitted on a tap with the dial's own role, so one component serves every
+  // indicator circle without knowing which context it opens.
+  signal clicked(string role)
 
   implicitWidth: diameter
   implicitHeight: diameter
@@ -82,5 +89,13 @@ Item {
       font.family: Style.font.family
       font.pixelSize: Math.max(8, Math.round(root.diameter * 0.26))
     }
+  }
+
+  // Click-only: the circles react to taps, never to hover — the dwell policy
+  // belongs to island-hover-dwell. TapHandler is not a hover handler, so it
+  // needs no `hoverEnabled` opt-out (it has no such property).
+  TapHandler {
+    acceptedButtons: Qt.LeftButton
+    onTapped: root.clicked(root.role)
   }
 }
