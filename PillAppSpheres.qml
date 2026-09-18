@@ -66,9 +66,14 @@ Item {
           Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: Util.alpha(Color.bar.text, sphere.selected ? 0.22 : 0.10)
+            // The pill's own surface, like the indicator circles: a solid bubble
+            // instead of the 10%-alpha wash that was nearly invisible over a
+            // wallpaper, and the selected app is marked by an accent rim.
+            color: Color.bar.background
             border.width: Math.max(1, Math.round(root.sphereSize / 16))
-            border.color: Util.alpha(Color.bar.text, sphere.selected ? 0.85 : 0.28)
+            border.color: sphere.selected
+              ? Color.accent
+              : Util.alpha(Color.bar.text, 0.28)
 
             Image {
               anchors.centerIn: parent
@@ -84,12 +89,13 @@ Item {
             }
 
             // Fallback for an app whose icon never resolved: the same generic
-            // executable glyph the notification views use.
+            // executable glyph the notification views use, in the accent colour
+            // like the indicator circles.
             Text {
               anchors.centerIn: parent
               visible: sphere.iconSource === ""
               text: "󰈔"
-              color: Util.alpha(Color.bar.text, 0.75)
+              color: Util.alpha(Color.accent, 0.90)
               font.family: Style.font.family
               font.pixelSize: Math.round(root.sphereSize * 0.5)
             }

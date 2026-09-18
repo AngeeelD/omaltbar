@@ -38,13 +38,24 @@ Item {
   readonly property real arcRadius: Math.max(1, (diameter - arcWidth) / 2)
   readonly property bool showValue: root.available && root.value > 0.001
 
+  // The bubble: the pill's own surface colour, so a circle reads as a small
+  // pill parked beside the island rather than as a bare ring floating on the
+  // strip. It also gives the accent glyph the contrast it needs.
+  Rectangle {
+    anchors.fill: parent
+    radius: width / 2
+    color: Color.bar.background
+    border.width: Math.max(1, Math.round(root.diameter / 22))
+    border.color: Util.alpha(Color.bar.text, root.available ? 0.22 : 0.12)
+  }
+
   Shape {
     anchors.fill: parent
     antialiasing: true
     // Track.
     ShapePath {
       strokeWidth: root.arcWidth
-      strokeColor: Util.alpha(Color.bar.text, root.available ? 0.18 : 0.10)
+      strokeColor: Util.alpha(Color.bar.text, root.available ? 0.30 : 0.16)
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap
       PathAngleArc {
@@ -81,7 +92,7 @@ Item {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       text: root.glyph
-      color: Util.alpha(Color.bar.text, root.available ? 0.92 : 0.45)
+      color: Util.alpha(root.accent, root.available ? 1.0 : 0.45)
       font.family: Style.font.family
       font.pixelSize: Math.round(root.diameter * 0.52)
     }
@@ -90,7 +101,7 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       visible: root.label !== ""
       text: root.label
-      color: Util.alpha(Color.bar.text, 0.70)
+      color: Util.alpha(root.accent, 0.70)
       font.family: Style.font.family
       font.pixelSize: Math.max(8, Math.round(root.diameter * 0.26))
     }
