@@ -1825,8 +1825,8 @@ Item {
     // hidden). It runs while either colon is on screen: the dot clock, or the
     // split clock at rest.
     property bool colonBlinkOn: true
-    readonly property bool splitClockVisible: !unit.pillStatusMode
-      && unit.pillTimeOpacity > 0 && !unit.pillTimeDeferred
+    readonly property bool splitClockVisible:
+      unit.pillTimeOpacity > 0 && !unit.pillTimeDeferred
     Timer {
       interval: 1000
       repeat: true
@@ -1863,11 +1863,15 @@ Item {
       target: root
       function onPillCompactModeChanged() { unit.applyPillForm() }
     }
-    // Left-click swaps the template: false = split clock, true = status dials
-    // (Wi-Fi ring on the left, battery ring on the right). The template decides
-    // what the pill shows when minimized: HH:mm for the clock, the two dials
-    // for the icons.
-    property bool pillStatusMode: false
+    // Indicator row visibility (session state, default visible). The pill's
+    // RIGHT click toggles it, next to the persisted LEFT-click pin. It is
+    // deliberately not a bar.* config key, so the settings surface is unchanged
+    // and no migration is needed.
+    property bool rowVisible: true
+    function toggleRow() {
+      unit.markInteraction()
+      unit.rowVisible = !unit.rowVisible
+    }
 
     // Minimum surface width: a single centred badge that carries HH:mm at the
     // SAME size as the split clock, so its surface is measured at runtime from
@@ -2676,11 +2680,12 @@ Item {
       }
     }
 
-    // Click routing for the pill. Left click swaps the template between the
-    // split clock and the status dials; right click toggles the pinned minimum
-    // pill. bar.islandInvertPillClicks swaps the two (see the MouseArea below).
-    // Hover keeps opening the grids and the clock view (see handlePillZone). The
-    // body is opened by hover, not by a click.
+    // Click routing for the pill. Non-inverted: RIGHT toggles the indicator row
+    // (session), LEFT toggles the pinned minimum pill (persisted). The retired
+    // template swap left RIGHT free for the row. bar.islandInvertPillClicks
+    // swaps the pair (see the MouseArea below). Hover keeps opening the grids
+    // and the clock view (see handlePillZone); the body is opened by hover, not
+    // by a click.
     function togglePillCompact() {
       unit.markInteraction()
       // The preference is the single owner: writing it repaints the pill through
@@ -2695,11 +2700,6 @@ Item {
       // the hover is forcing the pill compact; the hover then resumes.
       unit.pillPreview = true
       pillPreviewTimer.restart()
-    }
-
-    function togglePillTemplate() {
-      unit.markInteraction()
-      unit.pillStatusMode = !unit.pillStatusMode
     }
 
     function handlePillHoverExited() {
@@ -2821,11 +2821,11 @@ Item {
               unit.handlePillHoverExited()
             }
             onClicked: function(mouse) {
-              // Default: right click pins the compact dot, left click swaps the
-              // template. bar.islandInvertPillClicks swaps the two buttons.
+              // Default (non-inverted): RIGHT toggles the indicator row, LEFT
+              // pins the compact dot. bar.islandInvertPillClicks swaps the two.
               var right = mouse.button === Qt.RightButton
-              if (right !== root.invertPillClicks) unit.togglePillCompact()
-              else unit.togglePillTemplate()
+              if (right !== root.invertPillClicks) unit.toggleRow()
+              else unit.togglePillCompact()
             }
           }
 
@@ -2862,7 +2862,7 @@ Item {
             font.letterSpacing: unit.pillTimeTracking
             font.features: unit.pillTimeFeatures
             z: 3
-            opacity: unit.pillStatusMode ? 0 : unit.pillTimeOpacity
+            opacity: unit.pillTimeOpacity
             transformOrigin: Item.Center
             scale: 0.5 + 0.5 * unit.pillTimeOpacity
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -2899,7 +2899,7 @@ Item {
             font.letterSpacing: unit.pillTimeTracking
             font.features: unit.pillTimeFeatures
             z: 3
-            opacity: unit.pillStatusMode ? 0 : unit.pillTimeOpacity
+            opacity: unit.pillTimeOpacity
             transformOrigin: Item.Center
             scale: 0.5 + 0.5 * unit.pillTimeOpacity
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -2923,36 +2923,10 @@ Item {
             }
           }
 
-          // Status template (right click): a Wi-Fi ring in the left wing and a
-          // battery ring in the right wing. Same margins as the split clock so
-          // both templates share the pill geometry and the compact collapse.
-          PillStatusDial {
-            id: wifiDial
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: Math.round((parent.width - notchBody.visualW) / 2) + unit.restTimeInset
-            value: pillStatus.wifiFraction
-            available: pillStatus.wifiKind !== "disconnected"
-            glyph: pillStatus.wifiGlyph
-            accent: Color.accent
-            z: 3
-            opacity: unit.pillStatusMode ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
-          }
-
-          PillStatusDial {
-            id: batteryDial
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: Math.round((parent.width - notchBody.visualW) / 2) + unit.restTimeInset
-            value: pillStatus.batteryFraction
-            available: pillStatus.batteryPresent
-            glyph: pillStatus.batteryPresent ? pillStatus.batteryGlyph : "󰂑"
-            accent: Color.accent
-            z: 3
-            opacity: unit.pillStatusMode ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
-          }
+          // (The two in-pill status dials lived here. They are gone: the
+          // circles moved to the always-visible PillIndicatorRow beside the
+          // pill, and the pill keeps only the split clock. See the row mount at
+          // the end of pillContent.)
 
           // Maximum collapse: the surface has shrunk to the dot, so the wings
           // are gone and the wall clock is shown centred as HH:mm. It uses the
@@ -2964,7 +2938,7 @@ Item {
             id: pillDotClock
             anchors.centerIn: parent
             z: 4
-            opacity: (unit.pillMinimized && !unit.pillTimeDeferred && !unit.pillStatusMode) ? 1 : 0
+            opacity: (unit.pillMinimized && !unit.pillTimeDeferred) ? 1 : 0
             transformOrigin: Item.Center
             scale: unit.pillMinimized ? 1 : 0.6
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -3054,6 +3028,21 @@ Item {
             }
           }
 
+        }
+
+        // Indicator row: a static right-anchored sibling of the notch body.
+        // Anchored to the strip, not to the animated wing, so its click targets
+        // never move when an open island retracts the pill under the pointer.
+        // Horizontal growth only — the surface stays 64 px tall.
+        PillIndicatorRow {
+          id: indicatorRow
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.right: parent.right
+          anchors.rightMargin: unit.restTimeInset
+          statusSource: pillStatus
+          islandState: unit.islandState
+          rowVisible: unit.rowVisible
+          z: 3
         }
       }
     }
