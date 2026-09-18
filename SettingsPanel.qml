@@ -447,8 +447,8 @@ Column {
     width: parent.width
     label: "Invert pill clicks"
     hint: root.invertPillClicks
-      ? "Left click pins the compact dot. Right click switches the pill template (clock ⇄ status dials)."
-      : "Left click switches the pill template (clock ⇄ status dials). Right click pins the compact dot."
+      ? "Left click toggles the indicator row. Right click pins the compact dot."
+      : "Left click pins the compact dot. Right click toggles the indicator row."
     checked: root.invertPillClicks
     foreground: root.foreground
     fontFamily: root.fontFamily
