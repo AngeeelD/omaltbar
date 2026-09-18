@@ -2655,6 +2655,14 @@ Item {
     // be clicked. Named here, not inline, because it is a foreign surface's
     // geometry, not the island's.
     readonly property int hotCornerClearance: 68 + Style.space(8)
+    readonly property int sphereLeftInset: Math.max(unit.restTimeInset, unit.hotCornerClearance)
+    // Usable run for the spheres: from their left inset to just short of the
+    // pill's left edge, so the two static surfaces can never overlap.
+    readonly property int sphereMaxWidth: {
+      if (!unit.hostScreen) return Style.space(80)
+      var pillLeft = Math.round(unit.hostScreen.width / 2 - unit.pillWidth / 2)
+      return Math.max(Style.space(80), pillLeft - unit.sphereLeftInset - unit.restTimeInset)
+    }
 
     // Zone under a point inside the pill: "left" | "right" | "bottom".
     // Coordinates are pill-local, with (0,0) at the pill's top-left corner.
@@ -3054,9 +3062,8 @@ Item {
           id: appSpheres
           anchors.verticalCenter: parent.verticalCenter
           anchors.left: parent.left
-          anchors.leftMargin: Math.max(unit.restTimeInset, unit.hotCornerClearance)
-          maxWidth: Math.max(Style.space(80),
-            Math.round(parent.width / 2 - unit.pillWidth / 2) - unit.restTimeInset * 2)
+          anchors.leftMargin: unit.sphereLeftInset
+          maxWidth: unit.sphereMaxWidth
           windowSource: unit.windowSource
           islandState: unit.islandState
           z: 3
