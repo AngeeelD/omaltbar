@@ -1990,10 +1990,19 @@ Item {
       pageMemory: contextResolver
     }
 
-    // Live Wi-Fi/battery source for the pill's status template. Non-visual:
-    // the dials own every pixel (see PillStatusDial.qml).
+    // Live Wi-Fi/battery/Bluetooth/meter source for the indicator row.
+    // Non-visual: the dials own every pixel (see PillStatusDial.qml).
     PillStatusSource {
       id: pillStatus
+    }
+
+    // Single per-screen window reader for the app spheres and the window-list
+    // view. Scoped to this unit's screen, so a multi-monitor setup groups each
+    // screen's own windows. Non-visual; WindowSource is event-driven.
+    readonly property var windowSource: windowSourceObj
+    WindowSource {
+      id: windowSourceObj
+      hostScreen: unit.hostScreen
     }
 
     readonly property string screenKey: hostScreen ? String(hostScreen.name || "") : "unknown"
@@ -2640,6 +2649,13 @@ Item {
     // status dials anchor with it.
     readonly property int restTimeInset: Math.max(1, Math.round(Style.space(12) * unit.invScale))
 
+    // The expose plugin parks a 68x68 click-swallowing "hot corner" layer
+    // surface at (0,0) ABOVE the island's layer, so the left-anchored spheres
+    // start clear of it (plus a small gap) or their first circles could never
+    // be clicked. Named here, not inline, because it is a foreign surface's
+    // geometry, not the island's.
+    readonly property int hotCornerClearance: 68 + Style.space(8)
+
     // Zone under a point inside the pill: "left" | "right" | "bottom".
     // Coordinates are pill-local, with (0,0) at the pill's top-left corner.
     // The pill is cutout + two lateral slots: the clock's two halves are the
@@ -3028,6 +3044,22 @@ Item {
             }
           }
 
+        }
+
+        // App spheres: static left-anchored sibling of the notch body, same
+        // rationale as the indicator row below. The left margin clears the
+        // expose hot corner (see hotCornerClearance); the usable run stops
+        // before the pill so the two never overlap.
+        PillAppSpheres {
+          id: appSpheres
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.left: parent.left
+          anchors.leftMargin: Math.max(unit.restTimeInset, unit.hotCornerClearance)
+          maxWidth: Math.max(Style.space(80),
+            Math.round(parent.width / 2 - unit.pillWidth / 2) - unit.restTimeInset * 2)
+          windowSource: unit.windowSource
+          islandState: unit.islandState
+          z: 3
         }
 
         // Indicator row: a static right-anchored sibling of the notch body.
