@@ -1,6 +1,9 @@
 import QtQuick
 import Quickshell
 import Quickshell.Networking
+import Quickshell.Bluetooth
+import Quickshell.Services.Pipewire
+import Quickshell.Services.Mpris
 import Quickshell.Services.UPower
 // Reuse the first-party panels' own parsers and icon maps instead of vendoring
 // copies that would drift — the same absolute file-URL idiom the island's
@@ -8,10 +11,11 @@ import Quickshell.Services.UPower
 import "file:///usr/share/omarchy/shell/plugins/panels/network/Model.js" as NetworkModel
 import "file:///usr/share/omarchy/shell/plugins/panels/power/Model.js" as PowerModel
 
-// Non-visual, read-only projection of the two status sources the pill's
-// right-click template renders: Wi-Fi (NetworkManager) and battery (UPower).
-// Pure data — PillStatusDial owns all painting — so the pill stays a thin
-// consumer of the same live services the quick-settings panel reads.
+// Non-visual, read-only projection of the four status sources the indicator
+// row's circles render: Wi-Fi (NetworkManager), battery (UPower), Bluetooth
+// (BlueZ) and the music meter (MPRIS transport + PipeWire output peak). Pure
+// data — PillStatusDial owns all painting — so the row stays a thin consumer
+// of the same live services the quick-settings panel reads.
 Item {
   id: root
 
@@ -71,4 +75,77 @@ Item {
   })
 
   readonly property string batteryGlyph: PowerModel.batteryIcon(battery, onBattery, upowerStates)
+
+  // ------------------------------------------------------------- bluetooth
+  // The singleton is reached through an untyped alias on purpose: qmllint
+  // resolves `Bluetooth.defaultAdapter` / `.devices` to types it cannot find
+  // (the three unresolved-type warnings QuickSettingsView already carries) and
+  // the alias keeps that duplicate noise out of a new file. The dynamic-var
+  // idiom is the one this plugin uses for every other service handle too.
+  readonly property var btPlugin: Bluetooth
+  readonly property var btAdapter: btPlugin ? btPlugin.defaultAdapter : null
+  readonly property var btDevices: btPlugin && btPlugin.devices ? btPlugin.devices.values : []
+
+  readonly property var btConnectedDevice: {
+    for (var i = 0; i < btDevices.length; i++) {
+      var d = btDevices[i]
+      if (d && d.connected === true) return d
+    }
+    return null
+  }
+
+  readonly property int btConnectedCount: {
+    var count = 0
+    for (var i = 0; i < btDevices.length; i++)
+      if (btDevices[i] && btDevices[i].connected === true) count++
+    return count
+  }
+
+  // Powered radios only count as available: the circle dims when there is no
+  // adapter, or when the adapter is off/blocked (see the failure table).
+  readonly property bool btAvailable: !!btAdapter && btAdapter.enabled === true
+
+  // 0..1 ring fill with no signal reading behind it: a full ring while a
+  // device is connected, empty otherwise.
+  readonly property real btFraction: btAvailable && btConnectedCount > 0 ? 1 : 0
+
+  readonly property var btState: ({
+    available: btAvailable,
+    connected: btConnectedCount > 0,
+    count: btConnectedCount,
+    fraction: btFraction,
+    glyph: !btAdapter || btAdapter.enabled !== true
+      ? "󰂲"
+      : (btConnectedCount > 0 ? "󰂱" : "󰂯")
+  })
+
+  // ----------------------------------------------------------- music meter
+  // MPRIS owns "is anything playing"; PipeWire owns the output level behind it
+  // (the default sink's live peak, the same reading the audio panel exposes).
+  readonly property var mprisPlayers: Mpris.players ? Mpris.players.values : []
+
+  readonly property bool mediaPlaying: {
+    for (var i = 0; i < mprisPlayers.length; i++) {
+      var p = mprisPlayers[i]
+      if (p && p.isPlaying === true) return true
+    }
+    return false
+  }
+
+  readonly property var audioSink: Pipewire.defaultAudioSink
+  readonly property var sinkAudio: audioSink ? audioSink.audio : null
+
+  readonly property real meterLevel: {
+    if (!sinkAudio) return 0
+    var peak = Number(sinkAudio.peak)
+    if (!isFinite(peak)) return 0
+    return Math.max(0, Math.min(1, peak))
+  }
+
+  // `playing: false` ⇒ the row omits the meter dial entirely (see
+  // PillIndicatorRow). `level` is the live 0..1 peak while it is shown.
+  readonly property var meterState: ({
+    playing: mediaPlaying,
+    level: meterLevel
+  })
 }
