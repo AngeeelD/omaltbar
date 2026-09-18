@@ -627,6 +627,23 @@ Rectangle {
     return id
   }
 
+  // --- window-list keyboard bridge -----------------------------------------
+  // The island card is the surface's focus host (it carries the existing
+  // Escape handler), so the arrow/digit handlers live there and forward here.
+  // The loaded view owns the selection and the numbered quick actions; this
+  // card only routes, and only while the window list is the active context.
+  readonly property bool windowListActive: !!islandState && islandState.expanded
+    && islandState.activeContext === "island.windowList"
+    && !islandState.transientVisible
+
+  function windowListMove(delta) {
+    if (contentLoader.item) contentLoader.item.moveSelection(delta)
+  }
+
+  function windowListFocusDigit(digit) {
+    if (contentLoader.item) contentLoader.item.handleDigit(digit)
+  }
+
   // Debug-only diagnostic (read through the unit's debugIslandGeometry readout).
   // Evaluated at call time so the loaded view's real metrics are reported, not a
   // stale snapshot captured at load. Answers "which branch did the router take,

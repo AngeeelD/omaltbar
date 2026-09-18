@@ -447,8 +447,8 @@ Column {
     width: parent.width
     label: "Invert pill clicks"
     hint: root.invertPillClicks
-      ? "Left click toggles the indicator row. Right click pins the compact dot."
-      : "Left click pins the compact dot. Right click toggles the indicator row."
+      ? "Left click toggles the circles beside the pill (indicators and app spheres). Right click pins the compact dot."
+      : "Left click pins the compact dot. Right click toggles the circles beside the pill (indicators and app spheres)."
     checked: root.invertPillClicks
     foreground: root.foreground
     fontFamily: root.fontFamily
