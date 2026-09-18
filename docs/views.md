@@ -1,7 +1,7 @@
 # Views Reference
 
 Topic-scoped reference for the island's native views: every file under `views/`
-(12 files, 4,549 lines) with what it renders, the context id that mounts it, and
+(12 files, 4,539 lines) with what it renders, the context id that mounts it, and
 how a reader interacts with it. Everything here is derived statically from the
 QML source, and each row carries a `File.qml:line` citation so it can be
 re-checked with `grep -n`.
@@ -29,7 +29,7 @@ lists every context id that mounts it, and a context id names its view.
 | `views/ScreenRecordingView.qml` | 90 | The recording's target filename and a stop action | `island.screenrecord` (`DynamicIsland.qml:586`) | Stop button |
 | `views/NotificationsView.qml` | 878 | Live popup rows plus the archived history list, per-app icons, relative times and the DND toggle | `jankeesvw.notification-center` (`DynamicIsland.qml:587`) | Row tap runs the default action, live action buttons, dismiss/delete, clear all, DND |
 | `views/NotificationToastView.qml` | 531 | Toast snapshot cards only — no history, no archive mixing | `island.notificationToast` (`DynamicIsland.qml:588`) | Card-body tap runs the default action, live action buttons, dismiss |
-| `views/WindowListView.qml` | 276 | One card per window of the app chosen on the spheres: live `ScreencopyView` preview or the "Preview unavailable" fallback, plus the app icon, window title and workspace | `island.windowList` (`DynamicIsland.qml:602`) | Card tap collapses the island, then focuses that window in its own workspace through `hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:0x…' }))"` |
+| `views/WindowListView.qml` | 266 | One card per window of the app chosen on the spheres: live `ScreencopyView` preview or the "Preview unavailable" fallback, plus the app icon, window title and workspace | `island.windowList` (`DynamicIsland.qml:602`) | Card tap spawns the focus command detached (its ~0.2 s unmap delay runs inside that detached process) and then collapses the island, focusing that window in its own workspace through `hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:0x…' }))"` (`views/WindowListView.qml:69-72`) |
 
 This is the **12th** view on `main` at `e0b6257` (11 existing files). It is the
 13th only if the retained `feat/island-theme-switcher` branch, which adds
