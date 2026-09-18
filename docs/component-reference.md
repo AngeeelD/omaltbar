@@ -158,19 +158,20 @@ circle opens a context through `IslandState.setContext`:
 The role mapping lives on the row (`PillIndicatorRow.contextForRole`), so the
 dial stays a dumb painter: it gained a `role` property and a bare `TapHandler`
 that emits `clicked(role)` and owns no activation logic
-(`PillStatusDial.qml:29-33`, handler at `:116`). The row sizes its four dials
+(`PillStatusDial.qml:28-32`, handler at `:121`). The row sizes its four dials
 from its own `diameter` property, which the mount feeds with
 `unit.besidePillCircle` (`PillIndicatorRow.qml:26`), and it carries the
 open-hide on its root (`PillIndicatorRow.qml:59-67`). Its painting gained one
 filled circle behind the ring — a `Color.bar.background` bubble (the pill's own
 surface) with the glyph and the optional label in the pill clock's
-`Color.bar.text` family (each keeping its availability alpha, `:98` and `:107`),
-and the value arc in that same `Color.bar.text` (`:76`), so the ring and the glyph
+`Color.bar.text` family (each keeping its availability alpha, `:103` and `:112`),
+and the value arc in that same `Color.bar.text` (`:81`), so the ring and the glyph
 carry one colour. The ring is inset from the bubble's edge on purpose — hugging it
 made the arc read as a thicker border instead of as the progress indicator — so
-both the track and the value arc share the inset `arcRadius` (`:39-41`). That is
-what makes a circle read as a small pill and gives the glyph the clock's contrast
-(`PillStatusDial.qml:44-53`).
+both the track and the value arc share the inset `arcRadius` (`:44-45`). The glyph
+is a fraction of the bubble (`glyphRatio`, `:37`), and it deliberately stayed at
+80% of the ratio it had before the circles grew, so enlarging the circles did not
+enlarge the icons (`PillStatusDial.qml:49-58`).
 
 `PillStatusSource.qml` gained the two new sources behind those circles:
 Bluetooth (`btState`, from the BlueZ adapter and its devices,
@@ -200,13 +201,15 @@ inside a horizontal `Flickable` whose wheel event is accepted so it never reache
 the collapse/peek policy. Its `sphereSize` is an overridable property whose
 default matches the dial diameter and which the mount sets to
 `unit.besidePillCircle` (`PillAppSpheres.qml:22`), and the row carries the same
-open-hide as the indicator row (`:47-55`). Each sphere is a filled
+open-hide as the indicator row (`:56-60`). Each sphere is a filled
 `Color.bar.background` bubble — the pill's own surface, so it stays legible over
 any wallpaper — with the selected app rimmed in `accent`; the unresolved-icon
 fallback glyph uses `Color.bar.text` like the dials
-(`PillAppSpheres.qml:112-118`). A sphere click sets
+(`PillAppSpheres.qml:114-124`). The app icon is a fraction of the bubble
+(`iconRatio`, `:25`) and, like the dial's glyph, it stayed at 80% of the ratio it
+had before the spheres grew (`fallbackGlyphRatio`, `:27`). A sphere click sets
 `WindowSource.selectedAppId` and opens `island.windowList`
-(`PillAppSpheres.qml:41`).
+(`PillAppSpheres.qml:46`).
 
 `WindowSource.qml` is the single per-screen reader those surfaces share. It
 projects `Hyprland.toplevels` (event-driven; no polling), groups by
@@ -222,7 +225,7 @@ added to `ContextResolver.pageIds`, so it never joins the carousel and never
 becomes the entry page. The round trip is:
 
 1. **Entry** — a sphere click selects the app and calls
-   `IslandState.setContext("island.windowList")` (`PillAppSpheres.qml:41`).
+   `IslandState.setContext("island.windowList")` (`PillAppSpheres.qml:46`).
 2. **Render** — `DynamicIsland` registers `views/WindowListView.qml` for that
    id (`DynamicIsland.qml:602`), and the router loads it through
    `IslandState.nativeViewFor`.

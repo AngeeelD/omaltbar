@@ -20,6 +20,11 @@ Item {
   property int maxWidth: 320
   // Diameter of one sphere; the mount overrides it with 80% of the pill height.
   property int sphereSize: Style.font.title + Style.space(10)
+  // App icon as a fraction of the bubble. 0.58 was the ratio before the spheres
+  // grew; the icon now sits at 80% of that, matching the indicator circles.
+  readonly property real iconRatio: 0.58 * 0.8
+  // Same treatment for the unresolved-icon fallback glyph, which was 0.5.
+  readonly property real fallbackGlyphRatio: 0.5 * 0.8
   // Duration of the open/close hide; the mount passes the island's motion base
   // so the spheres retract in step with the pill. 340 is the built-in default.
   property int motionDuration: 340
@@ -95,7 +100,7 @@ Item {
 
             Image {
               anchors.centerIn: parent
-              width: Math.round(parent.width * 0.58)
+              width: Math.round(parent.width * root.iconRatio)
               height: width
               source: sphere.iconSource
               sourceSize.width: Math.round(parent.width * 2)
@@ -115,7 +120,7 @@ Item {
               text: "󰈔"
               color: Util.alpha(Color.bar.text, 0.90)
               font.family: Style.font.family
-              font.pixelSize: Math.round(root.sphereSize * 0.5)
+              font.pixelSize: Math.round(root.sphereSize * root.fallbackGlyphRatio)
             }
           }
 
