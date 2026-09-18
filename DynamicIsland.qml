@@ -360,6 +360,18 @@ Rectangle {
       islandBar: root.islandBar
     }
   }
+  // The app-sphere window list: one card per window of the chosen app, with
+  // live previews and click-to-focus. The reader lives on the island unit, so
+  // the list sees the same grouped, screen-filtered model the spheres do. It is
+  // a manual context (opened by a sphere click), never a resolved page.
+  Component {
+    id: windowListView
+    Views.WindowListView {
+      islandState: root.islandState
+      islandBar: root.islandBar
+      windowSource: root.islandUnit ? root.islandUnit.windowSource : null
+    }
+  }
 
   // Widget grids: the body form of the pill's left/right reveal. Same hosted
   // widgets and prop injection as the bar, laid out as a grid instead of a
@@ -586,6 +598,8 @@ Rectangle {
     islandState.setNativeView("island.screenrecord", screenRecordView)
     islandState.setNativeView("jankeesvw.notification-center", notificationsView)
     islandState.setNativeView("island.notificationToast", notificationToastView)
+    // Manual context opened by the app spheres, never a resolved page.
+    islandState.setNativeView("island.windowList", windowListView)
   }
 
   readonly property Component activeComponent: {
@@ -611,6 +625,23 @@ Rectangle {
       if (manifest && manifest.name) return String(manifest.name)
     }
     return id
+  }
+
+  // --- window-list keyboard bridge -----------------------------------------
+  // The island card is the surface's focus host (it carries the existing
+  // Escape handler), so the arrow/digit handlers live there and forward here.
+  // The loaded view owns the selection and the numbered quick actions; this
+  // card only routes, and only while the window list is the active context.
+  readonly property bool windowListActive: !!islandState && islandState.expanded
+    && islandState.activeContext === "island.windowList"
+    && !islandState.transientVisible
+
+  function windowListMove(delta) {
+    if (contentLoader.item) contentLoader.item.moveSelection(delta)
+  }
+
+  function windowListFocusDigit(digit) {
+    if (contentLoader.item) contentLoader.item.handleDigit(digit)
   }
 
   // Debug-only diagnostic (read through the unit's debugIslandGeometry readout).

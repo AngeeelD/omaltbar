@@ -1600,6 +1600,8 @@ Item {
       transientSuspended: unit.islandState.transientSuspended,
       transientSuspenders: Object.keys(unit.islandState.transientSuspenders || {}),
       autoOpened: unit.islandState.autoOpened,
+      clickOpened: unit.islandState.clickOpened,
+      clickOpenedContext: unit.islandState.clickOpenedContext,
       escapeFocusWanted: unit.escapeFocusWanted,
       hover: {
         strip: unit.stripHovered,
@@ -1825,8 +1827,8 @@ Item {
     // hidden). It runs while either colon is on screen: the dot clock, or the
     // split clock at rest.
     property bool colonBlinkOn: true
-    readonly property bool splitClockVisible: !unit.pillStatusMode
-      && unit.pillTimeOpacity > 0 && !unit.pillTimeDeferred
+    readonly property bool splitClockVisible:
+      unit.pillTimeOpacity > 0 && !unit.pillTimeDeferred
     Timer {
       interval: 1000
       repeat: true
@@ -1863,11 +1865,15 @@ Item {
       target: root
       function onPillCompactModeChanged() { unit.applyPillForm() }
     }
-    // Left-click swaps the template: false = split clock, true = status dials
-    // (Wi-Fi ring on the left, battery ring on the right). The template decides
-    // what the pill shows when minimized: HH:mm for the clock, the two dials
-    // for the icons.
-    property bool pillStatusMode: false
+    // Visibility of the circles beside the pill (session state, default
+    // visible): BOTH the indicator row and the app spheres, governed as one
+    // set. RIGHT click toggles them, next to the persisted LEFT-click pin.
+    // Deliberately not a bar.* config key, so no migration is needed.
+    property bool circlesVisible: true
+    function toggleCircles() {
+      unit.markInteraction()
+      unit.circlesVisible = !unit.circlesVisible
+    }
 
     // Minimum surface width: a single centred badge that carries HH:mm at the
     // SAME size as the split clock, so its surface is measured at runtime from
@@ -1950,13 +1956,6 @@ Item {
     // drag the content out from under a physical notch and inspect what the
     // hardware cutout normally hides. Single knob, one line per surface.
     readonly property int debugTopOffset: 0
-    // --- debug: status-dial centring ----------------------------------------
-    // Vertical nudge, in logical px, for the pill's status-template glyphs
-    // (positive = down). 0 is production. One knob per dial so the Wi-Fi and
-    // battery rings can be centred independently while inspecting them up
-    // close; restore both to 0 once the final value is agreed.
-    readonly property int wifiDialNudgeY: 0
-    readonly property int batteryDialNudgeY: 0
     // True only on the built-in notched panel (eDP with a measured strip), so
     // an attached flat monitor keeps the old aspect-derived pill instead of
     // inheriting the wide cutout geometry.
@@ -1993,10 +1992,19 @@ Item {
       pageMemory: contextResolver
     }
 
-    // Live Wi-Fi/battery source for the pill's status template. Non-visual:
-    // the dials own every pixel (see PillStatusDial.qml).
+    // Live Wi-Fi/battery/Bluetooth/meter source for the indicator row.
+    // Non-visual: the dials own every pixel (see PillStatusDial.qml).
     PillStatusSource {
       id: pillStatus
+    }
+
+    // Single per-screen window reader for the app spheres and the window-list
+    // view. Scoped to this unit's screen, so a multi-monitor setup groups each
+    // screen's own windows. Non-visual; WindowSource is event-driven.
+    readonly property var windowSource: windowSourceObj
+    WindowSource {
+      id: windowSourceObj
+      hostScreen: unit.hostScreen
     }
 
     readonly property string screenKey: hostScreen ? String(hostScreen.name || "") : "unknown"
@@ -2038,9 +2046,23 @@ Item {
     // the top strip (where it idles) then made the island claim the keyboard and
     // swallow the user's typing. The pill is where the pointer rests; the card
     // is where the content is.
+    //
+    // A CLICK-OPENED island (indicator circle / app sphere) is the second, and
+    // only other, state that may take the keyboard: it is unambiguously
+    // user-initiated, it is up until dismissed, and ESC / arrows / digits are
+    // the interaction it promises. It is released with the focus lock the
+    // moment the island collapses (clickOpened false) or a plugin window opens.
     readonly property bool escapeFocusWanted: islandWindow.visible
-      && unit.cardHovered && !unit.pluginWindowOpen
-      && !unit.islandState.autoOpened
+      && !unit.pluginWindowOpen
+      && (unit.islandState.clickOpened
+          || (unit.cardHovered && !unit.islandState.autoOpened))
+
+    // A click-opened island (an indicator circle or an app sphere) owns the
+    // pointer: while it is up, hover must not expand/collapse it nor change the
+    // context, so the hover-driven zone machinery and the auto-hide timers are
+    // muted. IslandState clears clickOpened on collapse (and on any hover-owned
+    // open), which restores normal behaviour immediately.
+    readonly property bool clickHoverLocked: unit.islandState.clickOpened
 
     // Single source of truth for "a real plugin panel window is open on this
     // screen": the tracked widget exists AND reports itself open. `opened` is
@@ -2403,6 +2425,10 @@ Item {
       running: unit.islandState.expanded && !unit.pluginPanelOpen
       onTriggered: {
         if (!unit.islandState.expanded || unit.pluginPanelOpen) return
+        // A click-opened island is user-owned and dismissed explicitly (ESC, a
+        // window pick, or an outside click): the pointer-away auto-hide must
+        // not retire the list out from under the keyboard interaction.
+        if (unit.clickHoverLocked) return
         if (unit.transientPeek) return
         if (notificationAutoCollapse.running) return
         if (unit.pointerNear || unit.revealNear) return
@@ -2643,6 +2669,41 @@ Item {
     // status dials anchor with it.
     readonly property int restTimeInset: Math.max(1, Math.round(Style.space(12) * unit.invScale))
 
+    // The pill's current LOGICAL edges: its compact/minimum width while
+    // `pillMinimized` is set, its configured width otherwise. This is a plain
+    // binding on that state boolean, deliberately NOT on the animated wing
+    // formula (`notchBody.visualW = minWidth + (pillW - minWidth) * collapse`):
+    // the circles jump to hug whichever form the state names instead of chasing
+    // the animation frames. The indicator row and the app spheres ride these
+    // edges, so compacting the pill moves both runs with it.
+    readonly property int pillLogicalWidth: unit.pillMinimized ? unit.dotWidth : unit.pillWidth
+    readonly property int pillLeftEdge:
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 - unit.pillLogicalWidth / 2)
+    readonly property int pillRightEdge:
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 + unit.pillLogicalWidth / 2)
+    // Visual gap between the pill and the circles parked beside it.
+    readonly property int besidePillGap: Style.space(8)
+    // Diameter of a circle parked beside the pill (indicator dials and app
+    // spheres alike): 80% of the pill's height, so both runs read as sub-pill
+    // badges. Derived once here and handed to both mounts.
+    readonly property int besidePillCircle: Math.round(unit.pillHeight * 0.8)
+
+    // The expose plugin parks a 68x68 click-swallowing "hot corner" layer
+    // surface at (0,0) ABOVE the island's layer, so the spheres stay clear of it
+    // (plus a small gap) or their first circles could never be clicked. Named
+    // here, not inline, because it is a foreign surface's geometry, not the
+    // island's.
+    readonly property int hotCornerClearance: 68 + Style.space(8)
+    readonly property int sphereLeftInset: Math.max(unit.restTimeInset, unit.hotCornerClearance)
+    // Usable run for the spheres: from their left inset to just short of the
+    // pill's left edge, so the two static runs can never overlap. The spheres
+    // are right-anchored to the pill and grow leftwards into this run.
+    readonly property int sphereMaxWidth: {
+      if (!unit.hostScreen) return Style.space(80)
+      return Math.max(Style.space(80),
+        unit.pillLeftEdge - unit.besidePillGap - unit.sphereLeftInset)
+    }
+
     // Zone under a point inside the pill: "left" | "right" | "bottom".
     // Coordinates are pill-local, with (0,0) at the pill's top-left corner.
     // The pill is cutout + two lateral slots: the clock's two halves are the
@@ -2668,6 +2729,10 @@ Item {
       // A dismissed island ignores hover until the pointer leaves and returns,
       // so the collapse animation cannot reopen it on its own.
       if (unit.hoverSuppressed) { unit.pillZone = ""; return }
+      // A click-opened island owns the pointer: hover must not swap its context
+      // for a grid or the clock view. Remember the zone so nothing re-arms
+      // blindly, but take no action until the lock is released.
+      if (unit.clickHoverLocked) { unit.pillZone = zone; return }
       if (zone === unit.pillZone) return
       unit.pillZone = zone
       if (zone === "left") {
@@ -2683,11 +2748,12 @@ Item {
       }
     }
 
-    // Click routing for the pill. Left click swaps the template between the
-    // split clock and the status dials; right click toggles the pinned minimum
-    // pill. bar.islandInvertPillClicks swaps the two (see the MouseArea below).
-    // Hover keeps opening the grids and the clock view (see handlePillZone). The
-    // body is opened by hover, not by a click.
+    // Click routing for the pill. Non-inverted: RIGHT toggles the circles beside
+    // the pill (session), LEFT toggles the pinned minimum pill (persisted). The
+    // retired template swap left RIGHT free for the circles.
+    // bar.islandInvertPillClicks swaps the pair (see the MouseArea below). Hover
+    // keeps opening the grids and the clock view (see handlePillZone); the body
+    // is opened by hover, not by a click.
     function togglePillCompact() {
       unit.markInteraction()
       // The preference is the single owner: writing it repaints the pill through
@@ -2702,11 +2768,6 @@ Item {
       // the hover is forcing the pill compact; the hover then resumes.
       unit.pillPreview = true
       pillPreviewTimer.restart()
-    }
-
-    function togglePillTemplate() {
-      unit.markInteraction()
-      unit.pillStatusMode = !unit.pillStatusMode
     }
 
     function handlePillHoverExited() {
@@ -2828,11 +2889,11 @@ Item {
               unit.handlePillHoverExited()
             }
             onClicked: function(mouse) {
-              // Default: right click pins the compact dot, left click swaps the
-              // template. bar.islandInvertPillClicks swaps the two buttons.
+              // Default (non-inverted): RIGHT toggles the circles beside the pill,
+              // LEFT pins the compact dot. islandInvertPillClicks swaps the two.
               var right = mouse.button === Qt.RightButton
-              if (right !== root.invertPillClicks) unit.togglePillCompact()
-              else unit.togglePillTemplate()
+              if (right !== root.invertPillClicks) unit.toggleCircles()
+              else unit.togglePillCompact()
             }
           }
 
@@ -2869,7 +2930,7 @@ Item {
             font.letterSpacing: unit.pillTimeTracking
             font.features: unit.pillTimeFeatures
             z: 3
-            opacity: unit.pillStatusMode ? 0 : unit.pillTimeOpacity
+            opacity: unit.pillTimeOpacity
             transformOrigin: Item.Center
             scale: 0.5 + 0.5 * unit.pillTimeOpacity
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -2906,7 +2967,7 @@ Item {
             font.letterSpacing: unit.pillTimeTracking
             font.features: unit.pillTimeFeatures
             z: 3
-            opacity: unit.pillStatusMode ? 0 : unit.pillTimeOpacity
+            opacity: unit.pillTimeOpacity
             transformOrigin: Item.Center
             scale: 0.5 + 0.5 * unit.pillTimeOpacity
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -2930,38 +2991,10 @@ Item {
             }
           }
 
-          // Status template (right click): a Wi-Fi ring in the left wing and a
-          // battery ring in the right wing. Same margins as the split clock so
-          // both templates share the pill geometry and the compact collapse.
-          PillStatusDial {
-            id: wifiDial
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: Math.round((parent.width - notchBody.visualW) / 2) + unit.restTimeInset
-            value: pillStatus.wifiFraction
-            available: pillStatus.wifiKind !== "disconnected"
-            glyph: pillStatus.wifiGlyph
-            nudgeY: unit.wifiDialNudgeY
-            accent: Color.accent
-            z: 3
-            opacity: unit.pillStatusMode ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
-          }
-
-          PillStatusDial {
-            id: batteryDial
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: Math.round((parent.width - notchBody.visualW) / 2) + unit.restTimeInset
-            value: pillStatus.batteryFraction
-            available: pillStatus.batteryPresent
-            glyph: pillStatus.batteryPresent ? pillStatus.batteryGlyph : "󰂑"
-            nudgeY: unit.batteryDialNudgeY
-            accent: Color.accent
-            z: 3
-            opacity: unit.pillStatusMode ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
-          }
+          // (The two in-pill status dials lived here. They are gone: the
+          // circles moved to the always-visible PillIndicatorRow beside the
+          // pill, and the pill keeps only the split clock. See the row mount at
+          // the end of pillContent.)
 
           // Maximum collapse: the surface has shrunk to the dot, so the wings
           // are gone and the wall clock is shown centred as HH:mm. It uses the
@@ -2973,7 +3006,7 @@ Item {
             id: pillDotClock
             anchors.centerIn: parent
             z: 4
-            opacity: (unit.pillMinimized && !unit.pillTimeDeferred && !unit.pillStatusMode) ? 1 : 0
+            opacity: (unit.pillMinimized && !unit.pillTimeDeferred) ? 1 : 0
             transformOrigin: Item.Center
             scale: unit.pillMinimized ? 1 : 0.6
             Behavior on opacity { NumberAnimation { duration: root.motion.base; easing.type: Easing.OutCubic } }
@@ -3064,6 +3097,43 @@ Item {
           }
 
         }
+
+        // App spheres: parked immediately LEFT of the pill and growing
+        // leftwards. Anchored to the pill's current LOGICAL edge (see
+        // pillLeftEdge), not to the animated wing, so their click targets jump
+        // with the compact/expand state instead of chasing the animation. The
+        // run stops clear of the expose hot corner (sphereLeftInset) and never
+        // overlaps the pill.
+        PillAppSpheres {
+          id: appSpheres
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.right: parent.right
+          anchors.rightMargin: parent.width - unit.pillLeftEdge + unit.besidePillGap
+          maxWidth: unit.sphereMaxWidth
+          sphereSize: unit.besidePillCircle
+          circlesVisible: unit.circlesVisible
+          motionDuration: root.motion.base
+          windowSource: unit.windowSource
+          islandState: unit.islandState
+          z: 3
+        }
+
+        // Indicator row: parked immediately RIGHT of the pill and growing
+        // rightwards. Anchored to the pill's current LOGICAL edge, never to the
+        // animated wing, so its click targets jump with the compact/expand state.
+        // Horizontal growth only — the surface stays 64 px tall.
+        PillIndicatorRow {
+          id: indicatorRow
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.left: parent.left
+          anchors.leftMargin: unit.pillRightEdge + unit.besidePillGap
+          diameter: unit.besidePillCircle
+          motionDuration: root.motion.base
+          statusSource: pillStatus
+          islandState: unit.islandState
+          circlesVisible: unit.circlesVisible
+          z: 3
+        }
       }
     }
 
@@ -3150,17 +3220,41 @@ Item {
           event.accepted = true
         }
         // Keyboard paging: while the island holds focus, the arrow keys move
-        // between context pages (a testable fallback for the swipe).
+        // between context pages (a testable fallback for the swipe). While the
+        // click-opened window list is up they move its selection instead, and
+        // the digits are numbered quick actions for that list.
         Keys.onLeftPressed: function(event) {
+          if (islandCard.windowListActive) {
+            islandCard.windowListMove(-1)
+            unit.markInteraction()
+            event.accepted = true
+            return
+          }
           if (!unit.islandState.paging || unit.islandState.pageCount <= 1) return
           unit.markInteraction()
           unit.islandState.pagePrev()
           event.accepted = true
         }
         Keys.onRightPressed: function(event) {
+          if (islandCard.windowListActive) {
+            islandCard.windowListMove(1)
+            unit.markInteraction()
+            event.accepted = true
+            return
+          }
           if (!unit.islandState.paging || unit.islandState.pageCount <= 1) return
           unit.markInteraction()
           unit.islandState.pageNext()
+          event.accepted = true
+        }
+        // Digits focus the matching window-list badge. Scoped: without the
+        // window list active the event is left unaccepted, so no other context
+        // ever loses a key to this handler.
+        Keys.onPressed: function(event) {
+          if (!islandCard.windowListActive) return
+          if (event.key < Qt.Key_1 || event.key > Qt.Key_9) return
+          islandCard.windowListFocusDigit(event.key - Qt.Key_0)
+          unit.markInteraction()
           event.accepted = true
         }
       }

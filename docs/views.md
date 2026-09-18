@@ -1,7 +1,7 @@
 # Views Reference
 
 Topic-scoped reference for the island's native views: every file under `views/`
-(11 files, 4,273 lines) with what it renders, the context id that mounts it, and
+(12 files, 4,539 lines) with what it renders, the context id that mounts it, and
 how a reader interacts with it. Everything here is derived statically from the
 QML source, and each row carries a `File.qml:line` citation so it can be
 re-checked with `grep -n`.
@@ -12,7 +12,7 @@ does not restate them. For the shape of the bar and which context each view
 occupies, read [Architecture](architecture.md).
 
 Mounting is declared once, in the `Component.onCompleted` block at
-`DynamicIsland.qml:575-588`: 14 registrations across 11 views. The table below is
+`DynamicIsland.qml:581-603`: 15 registrations across 12 views. The table below is
 ordered the way that block registers them. The mapping reads both ways — a view
 lists every context id that mounts it, and a context id names its view.
 
@@ -29,6 +29,11 @@ lists every context id that mounts it, and a context id names its view.
 | `views/ScreenRecordingView.qml` | 90 | The recording's target filename and a stop action | `island.screenrecord` (`DynamicIsland.qml:586`) | Stop button |
 | `views/NotificationsView.qml` | 878 | Live popup rows plus the archived history list, per-app icons, relative times and the DND toggle | `jankeesvw.notification-center` (`DynamicIsland.qml:587`) | Row tap runs the default action, live action buttons, dismiss/delete, clear all, DND |
 | `views/NotificationToastView.qml` | 531 | Toast snapshot cards only — no history, no archive mixing | `island.notificationToast` (`DynamicIsland.qml:588`) | Card-body tap runs the default action, live action buttons, dismiss |
+| `views/WindowListView.qml` | 342 | One card per window of the app chosen on the spheres: live `ScreencopyView` preview or the "Preview unavailable" fallback, plus the app icon, window title, workspace, and a floating 1..N number badge; the card run is centered while it fits the island | `island.windowList` (`DynamicIsland.qml:602`) | Card tap, Left/Right arrow or a digit focuses that window at once through the one shared `WindowSource.focusToplevel` — the command is detached and its ~0.2 s unmap delay runs inside that process — and then collapses the island (`views/WindowListView.qml:88-92`) |
+
+This is the **12th** view on `main` at `e0b6257` (11 existing files). It is the
+13th only if the retained `feat/island-theme-switcher` branch, which adds
+`views/ThemeSwitcherView.qml` as the 12th, lands first.
 
 The three heaviest views carry the detail the table cannot: what they render
 beyond the headline, and how a reader interacts with them.

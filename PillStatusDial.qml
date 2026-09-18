@@ -21,15 +21,45 @@ Item {
   // (positive = down). 0 is production; the dial stays opt-in via the caller
   // so a single ring can be tuned without moving the other.
   property int nudgeY: 0
-  property color accent: Color.accent
   property int diameter: Style.font.title + Style.space(10)
-  property int arcWidth: Math.max(2, Math.round(diameter / 12))
+  // 15% thinner than the original `diameter / 12` ring. Kept a `real` and
+  // deliberately NOT rounded: at the current 51 px diameter the original is
+  // 4.25 px, and rounding would snap the 15% reduction (4.25 * 0.85 = ~3.61)
+  // straight back to 4. The 2 px floor survives for very small dials.
+  property real arcWidth: Math.max(2, diameter / 12 * 0.85)
+  // Stable click identifier (e.g. "power", "network"), never a context id: the
+  // caller decides what a role opens, the dial only reports the click.
+  property string role: ""
+
+  // Emitted on a tap with the dial's own role, so one component serves every
+  // indicator circle without knowing which context it opens.
+  signal clicked(string role)
+
+  // Glyph size as a fraction of the bubble. 0.52 was the ratio before the circles
+  // grew to the pill's 80%; the glyph now sits at 80% of that, so enlarging the
+  // bubbles did not enlarge the icons with them.
+  readonly property real glyphRatio: 0.52 * 0.8
 
   implicitWidth: diameter
   implicitHeight: diameter
 
-  readonly property real arcRadius: Math.max(1, (diameter - arcWidth) / 2)
+  // The ring is deliberately inset from the bubble's edge: hugging the edge made
+  // the arc read as a thicker border instead of as the progress indicator.
+  readonly property int arcInset: Math.max(2, Math.round(diameter * 0.12))
+  readonly property real arcRadius:
+    Math.max(1, (diameter - arcWidth) / 2 - root.arcInset)
   readonly property bool showValue: root.available && root.value > 0.001
+
+  // The bubble: the pill's own surface colour, so a circle reads as a small
+  // pill parked beside the island rather than as a bare ring floating on the
+  // strip. It also gives the light glyph the contrast it needs.
+  Rectangle {
+    anchors.fill: parent
+    radius: width / 2
+    color: Color.bar.background
+    border.width: Math.max(1, Math.round(root.diameter / 22))
+    border.color: Util.alpha(Color.bar.text, root.available ? 0.22 : 0.12)
+  }
 
   Shape {
     anchors.fill: parent
@@ -37,7 +67,7 @@ Item {
     // Track.
     ShapePath {
       strokeWidth: root.arcWidth
-      strokeColor: Util.alpha(Color.bar.text, root.available ? 0.18 : 0.10)
+      strokeColor: Util.alpha(Color.bar.text, root.available ? 0.30 : 0.16)
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap
       PathAngleArc {
@@ -52,7 +82,7 @@ Item {
     // Value.
     ShapePath {
       strokeWidth: root.arcWidth
-      strokeColor: root.showValue ? root.accent : "transparent"
+      strokeColor: root.showValue ? Color.bar.text : "transparent"
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap
       PathAngleArc {
@@ -74,9 +104,9 @@ Item {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       text: root.glyph
-      color: Util.alpha(Color.bar.text, root.available ? 0.92 : 0.45)
+      color: Util.alpha(Color.bar.text, root.available ? 1.0 : 0.45)
       font.family: Style.font.family
-      font.pixelSize: Math.round(root.diameter * 0.52)
+      font.pixelSize: Math.round(root.diameter * root.glyphRatio)
     }
 
     Text {
@@ -87,5 +117,13 @@ Item {
       font.family: Style.font.family
       font.pixelSize: Math.max(8, Math.round(root.diameter * 0.26))
     }
+  }
+
+  // Click-only: the circles react to taps, never to hover — the dwell policy
+  // belongs to island-hover-dwell. TapHandler is not a hover handler, so it
+  // needs no `hoverEnabled` opt-out (it has no such property).
+  TapHandler {
+    acceptedButtons: Qt.LeftButton
+    onTapped: root.clicked(root.role)
   }
 }
