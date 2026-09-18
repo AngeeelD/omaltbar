@@ -148,13 +148,23 @@ Its whole round trip is traceable through this file:
 
 Two static surfaces sit beside the notch pill: the app spheres immediately to
 its left, the indicator row immediately to its right. Both are mounted as
-siblings of the notch body inside `pillContent` (`NotchIslandBar.qml:3069-3099`)
+siblings of the notch body inside `pillContent` (`NotchIslandBar.qml:3073-3107`)
 and parked against the pill's **resting** edges (`unit.pillLeftEdge` /
 `unit.pillRightEdge`, computed from the resolved `unit.pillWidth` and the
 screen width), never against the animated wing formula — so a click target never
 moves when an open island retracts the pill under the pointer. Both are
 click-only: the dwell/hover policy belongs to another change, so neither adds a
 hover handler.
+
+Every circle in both halves is `unit.besidePillCircle`, one shared derivation of
+`Math.round(unit.pillHeight * 0.8)` (`NotchIslandBar.qml:2665`) handed to both
+mounts, so the dials and the spheres stay the same size and the arithmetic lives
+in one place. While the island body is expanded — the same
+`IslandState.expanded` that retracts the pill — both runs fade and shrink away
+(`opacity` and `scale` animate 1 → 0 and back together, at the mount's
+`motionDuration` = `root.motion.base`, the pill's own motion) and `disable`
+themselves, so a faded-out circle can never be tapped blind. The run's geometry
+does not move: an Item's `scale` leaves the layout untouched.
 
 ### Indicator row
 
@@ -172,10 +182,15 @@ circle opens a context through `IslandState.setContext`:
 The role mapping lives on the row (`PillIndicatorRow.contextForRole`), so the
 dial stays a dumb painter: it gained a `role` property and a bare `TapHandler`
 that emits `clicked(role)` and owns no activation logic
-(`PillStatusDial.qml:29-33`, handler at `:113`). Its painting gained one filled
-circle behind the ring — a `Color.bar.background` bubble (the pill's own surface)
-with the glyph and the label in `accent` — which is what makes a circle read as a
-small pill and gives the accent the contrast it needs
+(`PillStatusDial.qml:29-33`, handler at `:113`). The row sizes its four dials
+from its own `diameter` property, which the mount feeds with
+`unit.besidePillCircle` (`PillIndicatorRow.qml:26`), and it carries the
+open-hide on its root (`PillIndicatorRow.qml:59-67`). Its painting gained one
+filled circle behind the ring — a `Color.bar.background` bubble (the pill's own
+surface) with the glyph and the optional label in the pill clock's
+`Color.bar.text` family (each keeping its availability alpha, `:95` and `:104`),
+while the value arc stays `accent` (`:73`) — which is what makes a circle read as
+a small pill and gives the glyph the clock's contrast
 (`PillStatusDial.qml:40-52`).
 
 `PillStatusSource.qml` gained the two new sources behind those circles:
@@ -203,11 +218,16 @@ RIGHT now toggles the indicator row instead:
 `PillAppSpheres.qml` is the static row parked immediately left of the pill and
 growing leftwards: one circle per app with a window on this screen, alphabetical,
 inside a horizontal `Flickable` whose wheel event is accepted so it never reaches
-the collapse/peek policy. Each sphere is a filled `Color.bar.background` bubble —
-the pill's own surface, so it stays legible over any wallpaper — with the
-selected app rimmed in `accent`. A sphere click sets
+the collapse/peek policy. Its `sphereSize` is an overridable property whose
+default matches the dial diameter and which the mount sets to
+`unit.besidePillCircle` (`PillAppSpheres.qml:22`), and the row carries the same
+open-hide as the indicator row (`:47-55`). Each sphere is a filled
+`Color.bar.background` bubble — the pill's own surface, so it stays legible over
+any wallpaper — with the selected app rimmed in `accent`; the unresolved-icon
+fallback glyph uses `Color.bar.text` like the dials
+(`PillAppSpheres.qml:112-118`). A sphere click sets
 `WindowSource.selectedAppId` and opens `island.windowList`
-(`PillAppSpheres.qml:33`).
+(`PillAppSpheres.qml:41`).
 
 `WindowSource.qml` is the single per-screen reader those surfaces share. It
 projects `Hyprland.toplevels` (event-driven; no polling), groups by
@@ -223,7 +243,7 @@ added to `ContextResolver.pageIds`, so it never joins the carousel and never
 becomes the entry page. The round trip is:
 
 1. **Entry** — a sphere click selects the app and calls
-   `IslandState.setContext("island.windowList")` (`PillAppSpheres.qml:33`).
+   `IslandState.setContext("island.windowList")` (`PillAppSpheres.qml:41`).
 2. **Render** — `DynamicIsland` registers `views/WindowListView.qml` for that
    id (`DynamicIsland.qml:602`), and the router loads it through
    `IslandState.nativeViewFor`.

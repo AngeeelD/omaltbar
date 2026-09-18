@@ -2659,6 +2659,10 @@ Item {
       Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 + unit.pillWidth / 2)
     // Visual gap between the pill and the circles parked beside it.
     readonly property int besidePillGap: Style.space(8)
+    // Diameter of a circle parked beside the pill (indicator dials and app
+    // spheres alike): 80% of the pill's height, so both runs read as sub-pill
+    // badges. Derived once here and handed to both mounts.
+    readonly property int besidePillCircle: Math.round(unit.pillHeight * 0.8)
 
     // The expose plugin parks a 68x68 click-swallowing "hot corner" layer
     // surface at (0,0) ABOVE the island's layer, so the spheres stay clear of it
@@ -3077,6 +3081,8 @@ Item {
           anchors.right: parent.right
           anchors.rightMargin: parent.width - unit.pillLeftEdge + unit.besidePillGap
           maxWidth: unit.sphereMaxWidth
+          sphereSize: unit.besidePillCircle
+          motionDuration: root.motion.base
           windowSource: unit.windowSource
           islandState: unit.islandState
           z: 3
@@ -3092,6 +3098,8 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           anchors.left: parent.left
           anchors.leftMargin: unit.pillRightEdge + unit.besidePillGap
+          diameter: unit.besidePillCircle
+          motionDuration: root.motion.base
           statusSource: pillStatus
           islandState: unit.islandState
           rowVisible: unit.rowVisible
