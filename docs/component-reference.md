@@ -158,16 +158,19 @@ circle opens a context through `IslandState.setContext`:
 The role mapping lives on the row (`PillIndicatorRow.contextForRole`), so the
 dial stays a dumb painter: it gained a `role` property and a bare `TapHandler`
 that emits `clicked(role)` and owns no activation logic
-(`PillStatusDial.qml:29-33`, handler at `:113`). The row sizes its four dials
+(`PillStatusDial.qml:29-33`, handler at `:116`). The row sizes its four dials
 from its own `diameter` property, which the mount feeds with
 `unit.besidePillCircle` (`PillIndicatorRow.qml:26`), and it carries the
 open-hide on its root (`PillIndicatorRow.qml:59-67`). Its painting gained one
 filled circle behind the ring — a `Color.bar.background` bubble (the pill's own
 surface) with the glyph and the optional label in the pill clock's
-`Color.bar.text` family (each keeping its availability alpha, `:95` and `:104`),
-while the value arc stays `accent` (`:73`) — which is what makes a circle read as
-a small pill and gives the glyph the clock's contrast
-(`PillStatusDial.qml:40-52`).
+`Color.bar.text` family (each keeping its availability alpha, `:98` and `:107`),
+and the value arc in that same `Color.bar.text` (`:76`), so the ring and the glyph
+carry one colour. The ring is inset from the bubble's edge on purpose — hugging it
+made the arc read as a thicker border instead of as the progress indicator — so
+both the track and the value arc share the inset `arcRadius` (`:39-41`). That is
+what makes a circle read as a small pill and gives the glyph the clock's contrast
+(`PillStatusDial.qml:44-53`).
 
 `PillStatusSource.qml` gained the two new sources behind those circles:
 Bluetooth (`btState`, from the BlueZ adapter and its devices,
