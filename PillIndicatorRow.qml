@@ -78,7 +78,6 @@ Item {
       available: root.statusSource ? root.statusSource.batteryPresent : false
       glyph: root.statusSource && root.statusSource.batteryPresent
         ? root.statusSource.batteryGlyph : "󰂑"
-      accent: Color.accent
       onClicked: function(role) { root.activate(role) }
     }
 
@@ -89,7 +88,6 @@ Item {
       value: root.statusSource ? root.statusSource.wifiFraction : 0
       available: root.statusSource ? root.statusSource.wifiKind !== "disconnected" : false
       glyph: root.statusSource ? root.statusSource.wifiGlyph : ""
-      accent: Color.accent
       onClicked: function(role) { root.activate(role) }
     }
 
@@ -100,7 +98,6 @@ Item {
       value: root.bt ? root.bt.fraction : 0
       available: root.bt ? root.bt.available : false
       glyph: root.bt ? root.bt.glyph : "󰂲"
-      accent: Color.accent
       onClicked: function(role) { root.activate(role) }
     }
 
@@ -113,7 +110,6 @@ Item {
       value: root.statusSource ? root.statusSource.meterState.level : 0
       available: true
       glyph: "󰎆"
-      accent: Color.accent
       onClicked: function(role) { root.activate(role) }
     }
   }

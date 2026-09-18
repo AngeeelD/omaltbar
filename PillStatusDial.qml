@@ -17,7 +17,10 @@ Item {
   property string glyph: ""
   // Optional readout under the glyph (e.g. "87%"). Empty hides it.
   property string label: ""
-  property color accent: Color.accent
+  // Debug-only vertical nudge for the centred content, in logical px
+  // (positive = down). 0 is production; the dial stays opt-in via the caller
+  // so a single ring can be tuned without moving the other.
+  property int nudgeY: 0
   property int diameter: Style.font.title + Style.space(10)
   property int arcWidth: Math.max(2, Math.round(diameter / 12))
   // Stable click identifier (e.g. "power", "network"), never a context id: the
@@ -31,12 +34,16 @@ Item {
   implicitWidth: diameter
   implicitHeight: diameter
 
-  readonly property real arcRadius: Math.max(1, (diameter - arcWidth) / 2)
+  // The ring is deliberately inset from the bubble's edge: hugging the edge made
+  // the arc read as a thicker border instead of as the progress indicator.
+  readonly property int arcInset: Math.max(2, Math.round(diameter * 0.12))
+  readonly property real arcRadius:
+    Math.max(1, (diameter - arcWidth) / 2 - root.arcInset)
   readonly property bool showValue: root.available && root.value > 0.001
 
   // The bubble: the pill's own surface colour, so a circle reads as a small
   // pill parked beside the island rather than as a bare ring floating on the
-  // strip. It also gives the accent glyph the contrast it needs.
+  // strip. It also gives the light glyph the contrast it needs.
   Rectangle {
     anchors.fill: parent
     radius: width / 2
@@ -66,7 +73,7 @@ Item {
     // Value.
     ShapePath {
       strokeWidth: root.arcWidth
-      strokeColor: root.showValue ? root.accent : "transparent"
+      strokeColor: root.showValue ? Color.bar.text : "transparent"
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap
       PathAngleArc {
