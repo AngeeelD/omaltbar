@@ -31,6 +31,11 @@ Item {
   // indicator circle without knowing which context it opens.
   signal clicked(string role)
 
+  // Glyph size as a fraction of the bubble. 0.52 was the ratio before the circles
+  // grew to the pill's 80%; the glyph now sits at 80% of that, so enlarging the
+  // bubbles did not enlarge the icons with them.
+  readonly property real glyphRatio: 0.52 * 0.8
+
   implicitWidth: diameter
   implicitHeight: diameter
 
@@ -96,7 +101,7 @@ Item {
       text: root.glyph
       color: Util.alpha(Color.bar.text, root.available ? 1.0 : 0.45)
       font.family: Style.font.family
-      font.pixelSize: Math.round(root.diameter * 0.52)
+      font.pixelSize: Math.round(root.diameter * root.glyphRatio)
     }
 
     Text {
