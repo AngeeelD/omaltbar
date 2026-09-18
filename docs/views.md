@@ -1,7 +1,7 @@
 # Views Reference
 
 Topic-scoped reference for the island's native views: every file under `views/`
-(12 files, 4,539 lines) with what it renders, the context id that mounts it, and
+(13 files, 5,065 lines) with what it renders, the context id that mounts it, and
 how a reader interacts with it. Everything here is derived statically from the
 QML source, and each row carries a `File.qml:line` citation so it can be
 re-checked with `grep -n`.
@@ -12,25 +12,25 @@ does not restate them. For the shape of the bar and which context each view
 occupies, read [Architecture](architecture.md).
 
 Mounting is declared once, in the `Component.onCompleted` block at
-`DynamicIsland.qml:581-603`: 15 registrations across 12 views. The table below is
+`DynamicIsland.qml:587-607`: 16 registrations across 13 views. The table below is
 ordered the way that block registers them. The mapping reads both ways — a view
 lists every context id that mounts it, and a context id names its view.
 
 | View | Lines | Renders | Mounting context | Key interactions |
 |------|-------|---------|------------------|------------------|
-| `views/ClockWeatherView.qml` | 186 | Large clock, full date, and a live Open-Meteo weather row with the `°C`/`°F` toggle when a location is configured | `omarchy.clock` (`DynamicIsland.qml:575`) | Read-only; the unit toggle persists through the bar's shell config API |
-| `views/DefaultContextView.qml` | 36 | The composed default page: `ClockWeatherView` above the `QuickSettingsView` deck, separated by a hairline | `island.default` (`DynamicIsland.qml:576`) | None of its own; it forwards to the two composed views |
-| `views/MusicView.qml` | 283 | MPRIS now-playing card (art, title/artist, transport, scrubber) reading the shared `MediaState` | `omarchy.media` (`DynamicIsland.qml:577`) | Play/pause and seek drag while playing; position ticks once a second |
-| `views/MediaPeekView.qml` | 91 | One slim now-playing row (art · title/artist · play state), no transport | `island.mediaPeek` (`DynamicIsland.qml:578`) | Read-only by design: it appears over content the user is already watching |
-| `views/QuickSettingsView.qml` | 1904 | Combined controls deck: audio, brightness, night light / stay awake / mic / DND, Wi-Fi, Bluetooth, power profiles, battery | `omarchy.audio`, `omarchy.network`, `omarchy.bluetooth`, `omarchy.power` (`DynamicIsland.qml:579-582`) | Slider and mute, device lists with connect/disconnect, passphrase prompt, control-exclusion drag |
-| `views/VolumeView.qml` | 55 | Transient output-volume overlay: glyph, percent, level bar | `omarchy.volume` (`DynamicIsland.qml:583`) | Read-only; it replaces a page for a beat and leaves |
-| `views/BrightnessView.qml` | 54 | Transient brightness overlay reading the shared `BrightnessState` | `island.brightness` (`DynamicIsland.qml:584`) | Read-only; it never polls or writes by itself |
-| `views/MicrophoneView.qml` | 165 | Mic recording state: mute, level, and the apps currently capturing | `omarchy.microphone` (`DynamicIsland.qml:585`) | Mute/unmute toggle |
-| `views/ScreenRecordingView.qml` | 90 | The recording's target filename and a stop action | `island.screenrecord` (`DynamicIsland.qml:586`) | Stop button |
-| `views/NotificationsView.qml` | 878 | Live popup rows plus the archived history list, per-app icons, relative times and the DND toggle | `jankeesvw.notification-center` (`DynamicIsland.qml:587`) | Row tap runs the default action, live action buttons, dismiss/delete, clear all, DND |
-| `views/NotificationToastView.qml` | 531 | Toast snapshot cards only — no history, no archive mixing | `island.notificationToast` (`DynamicIsland.qml:588`) | Card-body tap runs the default action, live action buttons, dismiss |
-| `views/ThemeSwitcherView.qml` | 450 | Theme picker: a live-filtering search field over a horizontal card carousel, each card carrying 8 resolved palette dots, a title-cased label and a `position/total` counter, plus the apply status line | `island.themeSwitcher` (`DynamicIsland.qml:593`) | Type to filter, Enter applies the match the filter aimed at; Down/Tab reaches the strip, Left/Right (or `h`/`l`) walk it, Up returns to the field, Enter applies optimistically; a click selects |
-| `views/WindowListView.qml` | 266 | One card per window of the app chosen on the spheres: live `ScreencopyView` preview or the "Preview unavailable" fallback, plus the app icon, window title and workspace | `island.windowList` (`DynamicIsland.qml:602`) | Card tap spawns the focus command detached (its ~0.2 s unmap delay runs inside that detached process) and then collapses the island, focusing that window in its own workspace through `hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:0x…' }))"` (`views/WindowListView.qml:69-72`) |
+| `views/ClockWeatherView.qml` | 186 | Large clock, full date, and a live Open-Meteo weather row with the `°C`/`°F` toggle when a location is configured | `omarchy.clock` (`DynamicIsland.qml:587`) | Read-only; the unit toggle persists through the bar's shell config API |
+| `views/DefaultContextView.qml` | 36 | The composed default page: `ClockWeatherView` above the `QuickSettingsView` deck, separated by a hairline | `island.default` (`DynamicIsland.qml:588`) | None of its own; it forwards to the two composed views |
+| `views/MusicView.qml` | 283 | MPRIS now-playing card (art, title/artist, transport, scrubber) reading the shared `MediaState` | `omarchy.media` (`DynamicIsland.qml:589`) | Play/pause and seek drag while playing; position ticks once a second |
+| `views/MediaPeekView.qml` | 91 | One slim now-playing row (art · title/artist · play state), no transport | `island.mediaPeek` (`DynamicIsland.qml:590`) | Read-only by design: it appears over content the user is already watching |
+| `views/QuickSettingsView.qml` | 1904 | Combined controls deck: audio, brightness, night light / stay awake / mic / DND, Wi-Fi, Bluetooth, power profiles, battery | `omarchy.audio`, `omarchy.network`, `omarchy.bluetooth`, `omarchy.power` (`DynamicIsland.qml:591-594`) | Slider and mute, device lists with connect/disconnect, passphrase prompt, control-exclusion drag |
+| `views/VolumeView.qml` | 55 | Transient output-volume overlay: glyph, percent, level bar | `omarchy.volume` (`DynamicIsland.qml:595`) | Read-only; it replaces a page for a beat and leaves |
+| `views/BrightnessView.qml` | 54 | Transient brightness overlay reading the shared `BrightnessState` | `island.brightness` (`DynamicIsland.qml:596`) | Read-only; it never polls or writes by itself |
+| `views/MicrophoneView.qml` | 165 | Mic recording state: mute, level, and the apps currently capturing | `omarchy.microphone` (`DynamicIsland.qml:597`) | Mute/unmute toggle |
+| `views/ScreenRecordingView.qml` | 90 | The recording's target filename and a stop action | `island.screenrecord` (`DynamicIsland.qml:598`) | Stop button |
+| `views/NotificationsView.qml` | 878 | Live popup rows plus the archived history list, per-app icons, relative times and the DND toggle | `jankeesvw.notification-center` (`DynamicIsland.qml:599`) | Row tap runs the default action, live action buttons, dismiss/delete, clear all, DND |
+| `views/NotificationToastView.qml` | 531 | Toast snapshot cards only — no history, no archive mixing | `island.notificationToast` (`DynamicIsland.qml:600`) | Card-body tap runs the default action, live action buttons, dismiss |
+| `views/ThemeSwitcherView.qml` | 450 | Theme picker: a live-filtering search field over a horizontal card carousel, each card carrying 8 resolved palette dots, a title-cased label and a `position/total` counter, plus the apply status line | `island.themeSwitcher` (`DynamicIsland.qml:605`) | Type to filter, Enter applies the match the filter aimed at; Down/Tab reaches the strip, Left/Right (or `h`/`l`) walk it, Up returns to the field, Enter applies optimistically; a click selects |
+| `views/WindowListView.qml` | 342 | One card per window of the app chosen on the spheres: live `ScreencopyView` preview or the "Preview unavailable" fallback, plus the app icon, window title, workspace, and a floating 1..N number badge; the card run is centered while it fits the island | `island.windowList` (`DynamicIsland.qml:607`) | Card tap, Left/Right arrow or a digit focuses that window at once through the one shared `WindowSource.focusToplevel` — the command is detached and its ~0.2 s unmap delay runs inside that process — and then collapses the island (`views/WindowListView.qml:88-92`) |
 
 This is the **13th** view: `main` already carries 12 (`views/ThemeSwitcherView.qml` is the 12th), and this branch adds `views/WindowListView.qml` as the 13th.
 

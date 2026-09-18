@@ -19,8 +19,9 @@ Item {
   property var statusSource: null
   // IslandState of the owning unit: a circle click opens its context through it.
   property var islandState: null
-  // Session visibility, toggled by the pill's RIGHT click. Default: visible.
-  property bool rowVisible: true
+  // Session visibility of the circles beside the pill, toggled by the pill's
+  // RIGHT click together with the app spheres. Default: visible.
+  property bool circlesVisible: true
 
   // Diameter of one dial; the mount overrides it with 80% of the pill height.
   property int diameter: Style.font.title + Style.space(10)
@@ -45,7 +46,9 @@ Item {
   function activate(role) {
     var contextId = root.contextForRole[String(role)] || ""
     if (contextId === "" || !root.islandState) return
-    root.islandState.setContext(contextId)
+    // byClick: an indicator circle is a click-opened island — ESC dismisses it,
+    // the body may take the keyboard, and hover is locked out until it closes.
+    root.islandState.setContext(contextId, true)
   }
 
   readonly property var bt: root.statusSource ? root.statusSource.btState : null
@@ -54,7 +57,7 @@ Item {
 
   width: row.implicitWidth
   height: row.implicitHeight
-  visible: root.rowVisible
+  visible: root.circlesVisible
 
   // Hidden while the island is open: opacity and scale animate together, and
   // the disabled root refuses clicks, so the faded-out run cannot be tapped

@@ -22,7 +22,11 @@ Item {
   // so a single ring can be tuned without moving the other.
   property int nudgeY: 0
   property int diameter: Style.font.title + Style.space(10)
-  property int arcWidth: Math.max(2, Math.round(diameter / 12))
+  // 15% thinner than the original `diameter / 12` ring. Kept a `real` and
+  // deliberately NOT rounded: at the current 51 px diameter the original is
+  // 4.25 px, and rounding would snap the 15% reduction (4.25 * 0.85 = ~3.61)
+  // straight back to 4. The 2 px floor survives for very small dials.
+  property real arcWidth: Math.max(2, diameter / 12 * 0.85)
   // Stable click identifier (e.g. "power", "network"), never a context id: the
   // caller decides what a role opens, the dial only reports the click.
   property string role: ""
@@ -94,6 +98,7 @@ Item {
 
   Column {
     anchors.centerIn: parent
+    anchors.verticalCenterOffset: root.nudgeY
     spacing: -Math.round(root.diameter * 0.04)
 
     Text {

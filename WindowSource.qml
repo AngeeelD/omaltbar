@@ -77,6 +77,26 @@ Item {
     return /^[0-9a-fA-F]+$/.test(address) ? "0x" + address : ""
   }
 
+  // The ONE focus implementation, shared by the app spheres (single-window
+  // shortcut) and the window-list view (a card tap / a digit key).
+  //
+  // The command must outlive any view: collapsing the island clears
+  // DynamicIsland.activeComponent, which destroys the view and any Timer
+  // declared inside it. So the ~0.2 s delay that lets the layer surface unmap
+  // before the compositor takes focus is owned by a detached process — the
+  // proven expose `activate-window` shape. An invalid or empty address aborts
+  // the whole action: no command is executed and the caller is told so.
+  // Returns true when the focus command was spawned.
+  function focusToplevel(toplevel) {
+    var address = root.addressFor(toplevel)
+    if (address === "") return false
+    Quickshell.execDetached([
+      "sh", "-c",
+      "sleep 0.2; hyprctl eval \"hl.dispatch(hl.dsp.focus({ window = 'address:" + address + "' }))\""
+    ])
+    return true
+  }
+
   function isEligible(toplevel) {
     return !!root.waylandFor(toplevel) && root.ipcFor(toplevel).mapped !== false
   }

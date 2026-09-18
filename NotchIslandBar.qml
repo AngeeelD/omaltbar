@@ -1600,6 +1600,8 @@ Item {
       transientSuspended: unit.islandState.transientSuspended,
       transientSuspenders: Object.keys(unit.islandState.transientSuspenders || {}),
       autoOpened: unit.islandState.autoOpened,
+      clickOpened: unit.islandState.clickOpened,
+      clickOpenedContext: unit.islandState.clickOpenedContext,
       escapeFocusWanted: unit.escapeFocusWanted,
       hover: {
         strip: unit.stripHovered,
@@ -1863,14 +1865,14 @@ Item {
       target: root
       function onPillCompactModeChanged() { unit.applyPillForm() }
     }
-    // Indicator row visibility (session state, default visible). The pill's
-    // RIGHT click toggles it, next to the persisted LEFT-click pin. It is
-    // deliberately not a bar.* config key, so the settings surface is unchanged
-    // and no migration is needed.
-    property bool rowVisible: true
-    function toggleRow() {
+    // Visibility of the circles beside the pill (session state, default
+    // visible): BOTH the indicator row and the app spheres, governed as one
+    // set. RIGHT click toggles them, next to the persisted LEFT-click pin.
+    // Deliberately not a bar.* config key, so no migration is needed.
+    property bool circlesVisible: true
+    function toggleCircles() {
       unit.markInteraction()
-      unit.rowVisible = !unit.rowVisible
+      unit.circlesVisible = !unit.circlesVisible
     }
 
     // Minimum surface width: a single centred badge that carries HH:mm at the
@@ -2044,9 +2046,23 @@ Item {
     // the top strip (where it idles) then made the island claim the keyboard and
     // swallow the user's typing. The pill is where the pointer rests; the card
     // is where the content is.
+    //
+    // A CLICK-OPENED island (indicator circle / app sphere) is the second, and
+    // only other, state that may take the keyboard: it is unambiguously
+    // user-initiated, it is up until dismissed, and ESC / arrows / digits are
+    // the interaction it promises. It is released with the focus lock the
+    // moment the island collapses (clickOpened false) or a plugin window opens.
     readonly property bool escapeFocusWanted: islandWindow.visible
-      && unit.cardHovered && !unit.pluginWindowOpen
-      && !unit.islandState.autoOpened
+      && !unit.pluginWindowOpen
+      && (unit.islandState.clickOpened
+          || (unit.cardHovered && !unit.islandState.autoOpened))
+
+    // A click-opened island (an indicator circle or an app sphere) owns the
+    // pointer: while it is up, hover must not expand/collapse it nor change the
+    // context, so the hover-driven zone machinery and the auto-hide timers are
+    // muted. IslandState clears clickOpened on collapse (and on any hover-owned
+    // open), which restores normal behaviour immediately.
+    readonly property bool clickHoverLocked: unit.islandState.clickOpened
 
     // Single source of truth for "a real plugin panel window is open on this
     // screen": the tracked widget exists AND reports itself open. `opened` is
@@ -2409,6 +2425,10 @@ Item {
       running: unit.islandState.expanded && !unit.pluginPanelOpen
       onTriggered: {
         if (!unit.islandState.expanded || unit.pluginPanelOpen) return
+        // A click-opened island is user-owned and dismissed explicitly (ESC, a
+        // window pick, or an outside click): the pointer-away auto-hide must
+        // not retire the list out from under the keyboard interaction.
+        if (unit.clickHoverLocked) return
         if (unit.transientPeek) return
         if (notificationAutoCollapse.running) return
         if (unit.pointerNear || unit.revealNear) return
@@ -2649,14 +2669,18 @@ Item {
     // status dials anchor with it.
     readonly property int restTimeInset: Math.max(1, Math.round(Style.space(12) * unit.invScale))
 
-    // The pill's RESTING edges, from its configured width centred on the strip.
-    // Deliberately not the animated wing formula: the indicator row and the app
-    // spheres are parked beside where the pill rests, so their click targets
-    // never move when an open island retracts the pill under the pointer.
+    // The pill's current LOGICAL edges: its compact/minimum width while
+    // `pillMinimized` is set, its configured width otherwise. This is a plain
+    // binding on that state boolean, deliberately NOT on the animated wing
+    // formula (`notchBody.visualW = minWidth + (pillW - minWidth) * collapse`):
+    // the circles jump to hug whichever form the state names instead of chasing
+    // the animation frames. The indicator row and the app spheres ride these
+    // edges, so compacting the pill moves both runs with it.
+    readonly property int pillLogicalWidth: unit.pillMinimized ? unit.dotWidth : unit.pillWidth
     readonly property int pillLeftEdge:
-      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 - unit.pillWidth / 2)
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 - unit.pillLogicalWidth / 2)
     readonly property int pillRightEdge:
-      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 + unit.pillWidth / 2)
+      Math.round((unit.hostScreen ? unit.hostScreen.width : 0) / 2 + unit.pillLogicalWidth / 2)
     // Visual gap between the pill and the circles parked beside it.
     readonly property int besidePillGap: Style.space(8)
     // Diameter of a circle parked beside the pill (indicator dials and app
@@ -2705,6 +2729,10 @@ Item {
       // A dismissed island ignores hover until the pointer leaves and returns,
       // so the collapse animation cannot reopen it on its own.
       if (unit.hoverSuppressed) { unit.pillZone = ""; return }
+      // A click-opened island owns the pointer: hover must not swap its context
+      // for a grid or the clock view. Remember the zone so nothing re-arms
+      // blindly, but take no action until the lock is released.
+      if (unit.clickHoverLocked) { unit.pillZone = zone; return }
       if (zone === unit.pillZone) return
       unit.pillZone = zone
       if (zone === "left") {
@@ -2720,12 +2748,12 @@ Item {
       }
     }
 
-    // Click routing for the pill. Non-inverted: RIGHT toggles the indicator row
-    // (session), LEFT toggles the pinned minimum pill (persisted). The retired
-    // template swap left RIGHT free for the row. bar.islandInvertPillClicks
-    // swaps the pair (see the MouseArea below). Hover keeps opening the grids
-    // and the clock view (see handlePillZone); the body is opened by hover, not
-    // by a click.
+    // Click routing for the pill. Non-inverted: RIGHT toggles the circles beside
+    // the pill (session), LEFT toggles the pinned minimum pill (persisted). The
+    // retired template swap left RIGHT free for the circles.
+    // bar.islandInvertPillClicks swaps the pair (see the MouseArea below). Hover
+    // keeps opening the grids and the clock view (see handlePillZone); the body
+    // is opened by hover, not by a click.
     function togglePillCompact() {
       unit.markInteraction()
       // The preference is the single owner: writing it repaints the pill through
@@ -2861,10 +2889,10 @@ Item {
               unit.handlePillHoverExited()
             }
             onClicked: function(mouse) {
-              // Default (non-inverted): RIGHT toggles the indicator row, LEFT
-              // pins the compact dot. bar.islandInvertPillClicks swaps the two.
+              // Default (non-inverted): RIGHT toggles the circles beside the pill,
+              // LEFT pins the compact dot. islandInvertPillClicks swaps the two.
               var right = mouse.button === Qt.RightButton
-              if (right !== root.invertPillClicks) unit.toggleRow()
+              if (right !== root.invertPillClicks) unit.toggleCircles()
               else unit.togglePillCompact()
             }
           }
@@ -3071,10 +3099,11 @@ Item {
         }
 
         // App spheres: parked immediately LEFT of the pill and growing
-        // leftwards. Anchored to the pill's RESTING edge (see pillLeftEdge), not
-        // to the animated wing, so their click targets never move when an open
-        // island retracts the pill under the pointer. The run stops clear of the
-        // expose hot corner (sphereLeftInset) and never overlaps the pill.
+        // leftwards. Anchored to the pill's current LOGICAL edge (see
+        // pillLeftEdge), not to the animated wing, so their click targets jump
+        // with the compact/expand state instead of chasing the animation. The
+        // run stops clear of the expose hot corner (sphereLeftInset) and never
+        // overlaps the pill.
         PillAppSpheres {
           id: appSpheres
           anchors.verticalCenter: parent.verticalCenter
@@ -3082,6 +3111,7 @@ Item {
           anchors.rightMargin: parent.width - unit.pillLeftEdge + unit.besidePillGap
           maxWidth: unit.sphereMaxWidth
           sphereSize: unit.besidePillCircle
+          circlesVisible: unit.circlesVisible
           motionDuration: root.motion.base
           windowSource: unit.windowSource
           islandState: unit.islandState
@@ -3089,10 +3119,9 @@ Item {
         }
 
         // Indicator row: parked immediately RIGHT of the pill and growing
-        // rightwards. Anchored to the pill's RESTING edge, never to the animated
-        // wing, so its click targets cannot move when an open island retracts the
-        // pill under the pointer. Horizontal growth only — the surface stays 64
-        // px tall.
+        // rightwards. Anchored to the pill's current LOGICAL edge, never to the
+        // animated wing, so its click targets jump with the compact/expand state.
+        // Horizontal growth only — the surface stays 64 px tall.
         PillIndicatorRow {
           id: indicatorRow
           anchors.verticalCenter: parent.verticalCenter
@@ -3102,7 +3131,7 @@ Item {
           motionDuration: root.motion.base
           statusSource: pillStatus
           islandState: unit.islandState
-          rowVisible: unit.rowVisible
+          circlesVisible: unit.circlesVisible
           z: 3
         }
       }
@@ -3191,14 +3220,28 @@ Item {
           event.accepted = true
         }
         // Keyboard paging: while the island holds focus, the arrow keys move
-        // between context pages (a testable fallback for the swipe).
+        // between context pages (a testable fallback for the swipe). While the
+        // click-opened window list is up they move its selection instead, and
+        // the digits are numbered quick actions for that list.
         Keys.onLeftPressed: function(event) {
+          if (islandCard.windowListActive) {
+            islandCard.windowListMove(-1)
+            unit.markInteraction()
+            event.accepted = true
+            return
+          }
           if (!unit.islandState.paging || unit.islandState.pageCount <= 1) return
           unit.markInteraction()
           unit.islandState.pagePrev()
           event.accepted = true
         }
         Keys.onRightPressed: function(event) {
+          if (islandCard.windowListActive) {
+            islandCard.windowListMove(1)
+            unit.markInteraction()
+            event.accepted = true
+            return
+          }
           if (!unit.islandState.paging || unit.islandState.pageCount <= 1) return
           unit.markInteraction()
           unit.islandState.pageNext()
@@ -3215,6 +3258,16 @@ Item {
           if (unit.islandState.displayedContext === "island.themeSwitcher") return
           unit.markInteraction()
           unit.islandState.setContext("island.themeSwitcher")
+          event.accepted = true
+        }
+        // Digits focus the matching window-list badge. Scoped: without the
+        // window list active the event is left unaccepted, so no other context
+        // ever loses a key to this handler.
+        Keys.onPressed: function(event) {
+          if (!islandCard.windowListActive) return
+          if (event.key < Qt.Key_1 || event.key > Qt.Key_9) return
+          islandCard.windowListFocusDigit(event.key - Qt.Key_0)
+          unit.markInteraction()
           event.accepted = true
         }
       }
