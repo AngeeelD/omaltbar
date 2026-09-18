@@ -222,10 +222,13 @@ becomes the entry page. The round trip is:
    is the one shown and the view is laid out (`views/WindowListView.qml:34`); a
    capture with no content shows "Preview unavailable" while the icon and title
    stay.
-4. **Exit / focus** — a card tap collapses the island, waits the reference's
-   ~0.2 s for the layer surface to unmap, then runs
+4. **Exit / focus** — a card tap spawns
    `hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:0x…' }))"`
-   (`views/WindowListView.qml:62`). The Lua dispatcher form is the one this
+   detached, with the reference's ~0.2 s delay for the layer surface to unmap
+   running inside that detached process, and only then collapses the island
+   (`views/WindowListView.qml:69-72`). The delay deliberately lives outside the
+   view: collapsing clears `DynamicIsland.activeComponent`, which destroys the
+   view and anything timed inside it. The Lua dispatcher form is the one this
    Hyprland's config mode uses.
 
 ## Context resolution
