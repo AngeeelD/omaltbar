@@ -18,9 +18,17 @@ Item {
   property var islandState: null
   // Widest run the spheres may occupy before the Flickable starts scrolling.
   property int maxWidth: 320
+  // Diameter of one sphere; the mount overrides it with 80% of the pill height.
+  property int sphereSize: Style.font.title + Style.space(10)
+  // Duration of the open/close hide; the mount passes the island's motion base
+  // so the spheres retract in step with the pill. 340 is the built-in default.
+  property int motionDuration: 340
+  // True while the island body is expanded below the strip. The spheres then
+  // fade and shrink away and stop accepting clicks, mirroring the pill retract.
+  readonly property bool islandOpen:
+    root.islandState ? root.islandState.expanded === true : false
 
   readonly property var groups: root.windowSource ? root.windowSource.appGroups : []
-  readonly property int sphereSize: Style.font.title + Style.space(10)
   readonly property string selectedAppId:
     root.windowSource ? String(root.windowSource.selectedAppId || "") : ""
 
@@ -35,6 +43,16 @@ Item {
 
   width: Math.min(flick.contentWidth, root.maxWidth)
   height: root.sphereSize
+
+  // Hidden while the island is open: opacity and scale animate together, and
+  // the disabled root refuses clicks (and wheel events), so the faded-out run
+  // cannot be tapped blind. scale leaves the layout untouched (the transform
+  // origin stays the item centre, the default).
+  enabled: !root.islandOpen
+  opacity: root.islandOpen ? 0 : 1
+  scale: root.islandOpen ? 0 : 1
+  Behavior on opacity { NumberAnimation { duration: root.motionDuration; easing.type: Easing.OutCubic } }
+  Behavior on scale { NumberAnimation { duration: root.motionDuration; easing.type: Easing.OutCubic } }
 
   Flickable {
     id: flick
@@ -89,13 +107,13 @@ Item {
             }
 
             // Fallback for an app whose icon never resolved: the same generic
-            // executable glyph the notification views use, in the accent colour
-            // like the indicator circles.
+            // executable glyph the notification views use, in the pill clock's
+            // text colour like the indicator circles.
             Text {
               anchors.centerIn: parent
               visible: sphere.iconSource === ""
               text: "󰈔"
-              color: Util.alpha(Color.accent, 0.90)
+              color: Util.alpha(Color.bar.text, 0.90)
               font.family: Style.font.family
               font.pixelSize: Math.round(root.sphereSize * 0.5)
             }

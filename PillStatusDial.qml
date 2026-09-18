@@ -92,7 +92,7 @@ Item {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       text: root.glyph
-      color: Util.alpha(root.accent, root.available ? 1.0 : 0.45)
+      color: Util.alpha(Color.bar.text, root.available ? 1.0 : 0.45)
       font.family: Style.font.family
       font.pixelSize: Math.round(root.diameter * 0.52)
     }
@@ -101,7 +101,7 @@ Item {
       anchors.horizontalCenter: parent.horizontalCenter
       visible: root.label !== ""
       text: root.label
-      color: Util.alpha(root.accent, 0.70)
+      color: Util.alpha(Color.bar.text, 0.70)
       font.family: Style.font.family
       font.pixelSize: Math.max(8, Math.round(root.diameter * 0.26))
     }
