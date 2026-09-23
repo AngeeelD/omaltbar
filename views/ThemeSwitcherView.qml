@@ -230,8 +230,20 @@ Column {
     // Enter from the field applies the match the filter already aimed at, so
     // the hint is true in both zones.
     onAccepted: root.requestApply(root.selectedName)
-    // Left/Right keep the caret (the field's default); Down and Tab hand the
-    // keyboard to the strip.
+    // Left/Right step the theme (hand focus to the strip first); Down and
+    // Tab also hand the keyboard to the strip. Up from the strip returns
+    // here, and a second Up (or Escape) is handled by the island card to
+    // navigate the picker stack.
+    Keys.onLeftPressed: function(event) {
+      strip.forceActiveFocus()
+      root.step(-1)
+      event.accepted = true
+    }
+    Keys.onRightPressed: function(event) {
+      strip.forceActiveFocus()
+      root.step(1)
+      event.accepted = true
+    }
     Keys.onDownPressed: function(event) {
       strip.forceActiveFocus()
       event.accepted = true
@@ -240,14 +252,28 @@ Column {
       strip.forceActiveFocus()
       event.accepted = true
     }
+    Keys.onUpPressed: function(event) {
+      // Up from the picker's field returns to the island. The card's own
+      // Up handler (NotchIslandBar) will see that the picker is up and
+      // collapse it; we just release focus so the card can handle it.
+      // If the field already has focus and the user presses Up again, the
+      // card's handler will open the background picker.
+      event.accepted = false
+    }
   }
 
   // --- zone 2: the carousel -------------------------------------------------
   Item {
+    id: carousel
     width: root.width
-    // A little slack above and below so the selected card's 1.08 scale and its
-    // focus ring are never clipped by the viewport.
-    height: root.cardH + Style.space(10)
+    // Slack large enough for BOTH overflows of the selected card: its 1.08
+    // scale ((1.08 - 1) * cardH / 2) and its focus ring (one space(3) margin
+    // plus a hairline border). At font base-size 17 that is ~8px per side,
+    // and Style.space(14) is 20px (10px per side), so the ring is never
+    // clipped. A horizontal ListView resets the delegate's y to 0
+    // (FxListItemSG::pointForPosition resets the inactive axis), so the
+    // cross-axis centring lives inside a full-height delegate, not on y.
+    height: root.cardH + Style.space(14)
 
     ListView {
       id: strip
@@ -297,24 +323,27 @@ Column {
       // Re-clamp on arrival so the selection is always a real card.
       onActiveFocusChanged: if (activeFocus) root.clampSelection()
 
-      delegate: Rectangle {
-        id: card
+      delegate: Item {
+        id: cardSlot
         required property int index
         required property var modelData
-
-        readonly property string themeName: String(card.modelData)
-        readonly property string themeLabel: root.labelFor(card.themeName)
-        // The card's OWN accent, so the affordance names the theme it belongs
-        // to rather than the active one.
-        readonly property color themeAccent: root.accentFor(card.themeName)
-        readonly property var themeDots: root.dotsFor(card.themeName)
-        readonly property bool selected: strip.currentIndex === card.index
-        readonly property bool pending: root.pendingName === card.themeName
-
         width: root.cardW
-        height: root.cardH
-        y: Math.round((strip.height - card.height) / 2)
-        radius: Style.cornerRadius
+        height: strip.height
+        Rectangle {
+          id: card
+          anchors.verticalCenter: parent.verticalCenter
+          readonly property string themeName: String(cardSlot.modelData)
+          readonly property string themeLabel: root.labelFor(card.themeName)
+          // The card's OWN accent, so the affordance names the theme it belongs
+          // to rather than the active one.
+          readonly property color themeAccent: root.accentFor(card.themeName)
+          readonly property var themeDots: root.dotsFor(card.themeName)
+          readonly property bool selected: strip.currentIndex === cardSlot.index
+          readonly property bool pending: root.pendingName === card.themeName
+
+          width: root.cardW
+          height: root.cardH
+          radius: Style.cornerRadius
         color: Util.alpha(Color.bar.text, card.selected ? 0.14 : 0.07)
         // Selected: own-accent border plus a larger scale. Unselected cards are
         // borderless, so the affordance reads without a second colour system.
@@ -404,14 +433,15 @@ Column {
         }
         onPendingChanged: if (!card.pending) card.opacity = 1
 
-        MouseArea {
-          anchors.fill: parent
-          acceptedButtons: Qt.LeftButton
-          // Selecting only, never applying: a stray click must not repaint the
-          // whole desktop. Enter is the deliberate path.
-          onClicked: {
-            strip.currentIndex = card.index
-            strip.forceActiveFocus()
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            // Selecting only, never applying: a stray click must not repaint
+            // the whole desktop. Enter is the deliberate path.
+            onClicked: {
+              strip.currentIndex = cardSlot.index
+              strip.forceActiveFocus()
+            }
           }
         }
       }

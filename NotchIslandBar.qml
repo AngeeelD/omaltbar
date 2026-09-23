@@ -1389,7 +1389,10 @@ Item {
       var unit = focusedIslandUnit()
       if (!unit) return
       if (unit.islandState.expanded) unit.islandState.collapse()
-      else unit.islandState.openResolved()
+      else {
+        unit.islandState.openResolved()
+        unit.keepKeyboardFocus()
+      }
     }
     // Debug-only: mount a specific island context without pointer injection, so
     // the transient/suspension paths can be exercised from a shell.
@@ -2038,24 +2041,25 @@ Item {
     // Escape returns the island to rest. Focus is released the moment the
     // pointer leaves or a plugin window appears, so typing elsewhere is never
     // captured. Plugin panels keep their own focus and are out of scope here.
-    // Escape handling: the body surface takes keyboard focus ONLY while the
-    // pointer is over the island BODY CARD and the island was not opened
-    // automatically; every other state is WlrKeyboardFocus.None (see the window
-    // below). Focus used to follow `revealNear`, which includes the pill notch
-    // and the mini-player, and to fall back to OnDemand: parking the pointer on
-    // the top strip (where it idles) then made the island claim the keyboard and
-    // swallow the user's typing. The pill is where the pointer rests; the card
-    // is where the content is.
-    //
-    // A CLICK-OPENED island (indicator circle / app sphere) is the second, and
-    // only other, state that may take the keyboard: it is unambiguously
-    // user-initiated, it is up until dismissed, and ESC / arrows / digits are
-    // the interaction it promises. It is released with the focus lock the
-    // moment the island collapses (clickOpened false) or a plugin window opens.
+    // Escape handling: the body surface takes keyboard focus ONLY while
+    // the pointer is on the island BODY CARD or the pill body and the island
+    // was not opened automatically; every other state is WlrKeyboardFocus.None
+    // (see the window below). Focus used to follow `revealNear` and fall back
+    // to OnDemand, which let a pointer parked on the top strip claim the
+    // keyboard. The pill hover is what opens the island, so an open island
+    // now owns the keyboard while the pointer is on the pill.
+    // A USER-OWNED island (a click on an indicator circle / app sphere, or a
+    // key into the theme picker) is the other state that may take the
+    // keyboard: it is unambiguously user-initiated and up until dismissed;
+    // ESC / arrows / digits are the interaction it promises. Released with the
+    // focus lock when the island collapses or a plugin window opens.
     readonly property bool escapeFocusWanted: islandWindow.visible
       && !unit.pluginWindowOpen
       && (unit.islandState.clickOpened
-          || (unit.cardHovered && !unit.islandState.autoOpened))
+          || ((unit.cardHovered || unit.pillBodyHovered) && !unit.islandState.autoOpened)
+          || unit.islandState.displayedContext === "island.themeSwitcher"
+          || unit.islandState.displayedContext === "island.backgroundPicker"
+          || Date.now() < unit.keyboardFocusUntil)
 
     // A click-opened island (an indicator circle or an app sphere) owns the
     // pointer: while it is up, hover must not expand/collapse it nor change the
@@ -2354,6 +2358,18 @@ Item {
     function noteBodyResize() {
       if (unit.revealSettling) revealSettleTimer.restart()
       if (!unit.revealNear) revealHideTimer.restart()
+      // The pickers are shorter than the page they replace, so the card may
+      // compact under a pointer that was inside the previous page. That
+      // shrink would otherwise make `pointerNear` false and let the
+      // pointer-away auto-hide retire the picker even though the pointer
+      // never left the island area. Reset the away clock so the 500ms grace
+      // restarts from the resize, and keep the normal hover-leave behaviour
+      // for a genuine pointer exit.
+      var ctx = unit.islandState.displayedContext
+      if ((ctx === "island.themeSwitcher" || ctx === "island.backgroundPicker")
+          && !unit.pointerNear && !unit.revealNear) {
+        unit.pointerAwaySince = Date.now()
+      }
     }
 
     // --- organic body presence + 5s auto-hide -------------------------------
@@ -2399,6 +2415,17 @@ Item {
       if (unit.pointerNear) hoverSuppressRelease.stop()
       else if (unit.hoverSuppressed) hoverSuppressRelease.restart()
     }
+    // Grace period for keyboard focus after the island is opened or after a
+    // picker stack navigation (Up/Down). While this is in the future the body
+    // keeps Exclusive focus even without hover, so Down/Up from the island
+    // reaches the card. This is what makes the keyboard-driven picker stack
+    // (island <-> theme <-> background) work without requiring the pointer to
+    // be on the pill, while still releasing focus quickly so typing elsewhere
+    // is not captured.
+    property double keyboardFocusUntil: 0
+    function keepKeyboardFocus() {
+      unit.keyboardFocusUntil = Date.now() + 2000
+    }
 
     // After Escape the pointer is usually still over the pill, and the collapse
     // animation itself re-fires the hover — which would immediately reopen the
@@ -2431,6 +2458,11 @@ Item {
         if (unit.clickHoverLocked) return
         if (unit.transientPeek) return
         if (notificationAutoCollapse.running) return
+        // Keep the island open while the keyboard focus grace period is active
+        // (e.g. after opening via the `island` toggle or after a picker stack
+        // navigation). This is what lets Down/Up from the island reach the
+        // pickers without requiring the pointer to be on the pill.
+        if (Date.now() < unit.keyboardFocusUntil) return
         if (unit.pointerNear || unit.revealNear) return
         if (unit.pointerAwaySince <= 0) return
         if (Date.now() - unit.pointerAwaySince < 500) return
@@ -3247,17 +3279,53 @@ Item {
           unit.islandState.pageNext()
           event.accepted = true
         }
-        // Guarded Down entry into the theme picker. Same shape as the Left/Right
-        // pair above: an unaccepted key just falls through. The island must be
-        // open, and the picker must not already be showing — its field and strip
-        // accept their own arrow keys, so a Down that reaches this handler means
-        // the picker is not up. `setContext` makes it a manual context, which is
-        // what keeps it out of ContextResolver.pageIds.
+        // Guarded Down entry into the theme picker. Same shape as the
+        // Left/Right pair above: an unaccepted key just falls through. The
+        // island must be open and the picker not already showing — its field
+        // and strip own their keys, so a Down here means the picker is not up.
+        // `setContext` makes it a manual context; `noteBodyResize()` keeps
+        // the pointer-away auto-hide from retiring it when its shorter content
+        // compacts the card under the pointer.
         Keys.onDownPressed: function(event) {
+          // Stack: Down from background picker returns to island; Down from
+          // island opens theme picker.
+          if (unit.islandState.displayedContext === "island.backgroundPicker") {
+            unit.markInteraction()
+            unit.keepKeyboardFocus()
+            unit.islandState.openResolved()
+            islandCard.forceActiveFocus()
+            event.accepted = true
+            return
+          }
           if (!unit.islandState.expanded) return
           if (unit.islandState.displayedContext === "island.themeSwitcher") return
           unit.markInteraction()
+          unit.keepKeyboardFocus()
           unit.islandState.setContext("island.themeSwitcher")
+          // The new view's search field will autofocus on creation; keep the
+          // card focused until then so the next Up/Down is not lost.
+          islandCard.forceActiveFocus()
+          event.accepted = true
+        }
+        Keys.onUpPressed: function(event) {
+          // Stack: Up from theme picker returns to island; Up from island
+          // opens background picker. The pickers' own Up/Down (search field
+          // <-> strip) is handled inside the view; an unaccepted Up/Down
+          // from the view falls through to here.
+          if (unit.islandState.displayedContext === "island.themeSwitcher") {
+            unit.markInteraction()
+            unit.keepKeyboardFocus()
+            unit.islandState.openResolved()
+            islandCard.forceActiveFocus()
+            event.accepted = true
+            return
+          }
+          if (!unit.islandState.expanded) return
+          if (unit.islandState.displayedContext === "island.backgroundPicker") return
+          unit.markInteraction()
+          unit.keepKeyboardFocus()
+          unit.islandState.setContext("island.backgroundPicker")
+          islandCard.forceActiveFocus()
           event.accepted = true
         }
         // Digits focus the matching window-list badge. Scoped: without the

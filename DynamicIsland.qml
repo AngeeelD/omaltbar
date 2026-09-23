@@ -74,10 +74,15 @@ Rectangle {
     if (islandState.activeContext === islandState.gridContextRight) return rightWidgetsGrid.implicitHeight
     return contentLoader.item && contentLoader.item.implicitHeight > 0 ? contentLoader.item.implicitHeight : 0
   }
+  // Headers for the picker stack add their height when the main view is
+  // showing; otherwise the picker/grid determines the height alone.
+  readonly property real headerReserve: root.isMainView
+    ? topHeader.height + bottomHeader.height + Style.spacing.sm
+    : 0
   implicitHeight: contentPadding * 2 + Math.max(
     Style.space(64),
     activeContentHeight
-  ) + root.pagerStrip + (root.dragging ? root.dropBarHeight + Style.spacing.sm : 0)
+  ) + headerReserve + root.pagerStrip + (root.dragging ? root.dropBarHeight + Style.spacing.sm : 0)
   width: implicitWidth
   height: implicitHeight
 
@@ -603,6 +608,7 @@ Rectangle {
     // paging. The open card's Down guard is its only entry (NotchIslandBar),
     // and it is deliberately NOT a clock face — the pill keeps its own time.
     islandState.setNativeView("island.themeSwitcher", themeSwitcherView)
+    islandState.setNativeView("island.backgroundPicker", backgroundPickerView)
     // Manual context opened by the app spheres, never a resolved page.
     islandState.setNativeView("island.windowList", windowListView)
   }
@@ -620,6 +626,20 @@ Rectangle {
     Views.ThemeSwitcherView {
       islandBar: root.islandBar
       themePalette: themePaletteSource
+    }
+  }
+
+  // --- background picker ----------------------------------------------------
+  // Same ownership rationale as the theme palette: the background inventory
+  // (image paths) is cached outside the Loader so a warm-up survives context
+  // switches. One instance, shared by every open.
+  BackgroundPalette { id: backgroundPaletteSource }
+
+  Component {
+    id: backgroundPickerView
+    Views.BackgroundPickerView {
+      islandBar: root.islandBar
+      backgroundPalette: backgroundPaletteSource
     }
   }
 
@@ -720,13 +740,137 @@ Rectangle {
     if (host.shell && typeof host.shell.summon === "function") host.shell.summon(id, "")
   }
 
-  Loader {
-    id: contentLoader
+  // Picker stack navigation headers - visible only on the main island view.
+  // They offer a clickable, discoverable alternative to the Up/Down keys.
+  readonly property bool isMainView: {
+    if (!islandState || !islandState.expanded) return false
+    if (islandState.transientVisible) return false
+    var ctx = String(islandState.displayedContext || "")
+    if (ctx === "island.themeSwitcher" || ctx === "island.backgroundPicker") return false
+    if (islandState.isGridContext(ctx)) return false
+    if (ctx === "island.windowList") return false
+    return true
+  }
+
+  // Top header: background picker
+  Item {
+    id: topHeader
     anchors {
       top: parent.top
       left: parent.left
       right: parent.right
-      margins: root.contentPadding
+      topMargin: Style.spacing.sm
+      leftMargin: root.contentPadding
+      rightMargin: root.contentPadding
+    }
+    height: Style.space(18)
+    visible: root.isMainView
+    opacity: visible ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: root.motionFast; easing.type: Easing.OutCubic } }
+
+    Row {
+      anchors.centerIn: parent
+      spacing: Style.spacing.sm
+      Rectangle {
+        width: Math.max(Style.space(24), (topHeader.width - bgLabel.width - parent.spacing * 2) / 2)
+        height: 1
+        color: Util.alpha(Color.bar.text, 0.15)
+        anchors.verticalCenter: parent.verticalCenter
+      }
+      Text {
+        id: bgLabel
+        text: "\u2227  background"
+        color: topMouse.containsMouse ? Color.accent : Util.alpha(Color.bar.text, 0.55)
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+        Behavior on color { ColorAnimation { duration: root.motionFast } }
+      }
+      Rectangle {
+        width: Math.max(Style.space(24), (topHeader.width - bgLabel.width - parent.spacing * 2) / 2)
+        height: 1
+        color: Util.alpha(Color.bar.text, 0.15)
+        anchors.verticalCenter: parent.verticalCenter
+      }
+    }
+    MouseArea {
+      id: topMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        if (root.islandState) {
+          root.islandState.setContext("island.backgroundPicker")
+          if (root.islandBar) root.islandBar.markInteraction()
+        }
+      }
+    }
+  }
+
+  // Bottom header: theme picker
+  Item {
+    id: bottomHeader
+    anchors {
+      bottom: parent.bottom
+      left: parent.left
+      right: parent.right
+      bottomMargin: root.pagerStrip + Style.spacing.sm
+      leftMargin: root.contentPadding
+      rightMargin: root.contentPadding
+    }
+    height: Style.space(18)
+    visible: root.isMainView
+    opacity: visible ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: root.motionFast; easing.type: Easing.OutCubic } }
+
+    Row {
+      anchors.centerIn: parent
+      spacing: Style.spacing.sm
+      Rectangle {
+        width: Math.max(Style.space(24), (bottomHeader.width - themeLabel.width - parent.spacing * 2) / 2)
+        height: 1
+        color: Util.alpha(Color.bar.text, 0.15)
+        anchors.verticalCenter: parent.verticalCenter
+      }
+      Text {
+        id: themeLabel
+        text: "themes  \u2228"
+        color: bottomMouse.containsMouse ? Color.accent : Util.alpha(Color.bar.text, 0.55)
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption
+        Behavior on color { ColorAnimation { duration: root.motionFast } }
+      }
+      Rectangle {
+        width: Math.max(Style.space(24), (bottomHeader.width - themeLabel.width - parent.spacing * 2) / 2)
+        height: 1
+        color: Util.alpha(Color.bar.text, 0.15)
+        anchors.verticalCenter: parent.verticalCenter
+      }
+    }
+    MouseArea {
+      id: bottomMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        if (root.islandState) {
+          root.islandState.setContext("island.themeSwitcher")
+          if (root.islandBar) root.islandBar.markInteraction()
+        }
+      }
+    }
+  }
+
+  Loader {
+    id: contentLoader
+    anchors {
+      top: topHeader.visible ? topHeader.bottom : parent.top
+      bottom: bottomHeader.visible ? bottomHeader.top : parent.bottom
+      left: parent.left
+      right: parent.right
+      topMargin: root.contentPadding
+      bottomMargin: root.contentPadding
+      leftMargin: root.contentPadding
+      rightMargin: root.contentPadding
     }
     sourceComponent: root.activeComponent
   }
