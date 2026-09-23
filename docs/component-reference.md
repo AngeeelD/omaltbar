@@ -130,21 +130,51 @@ Its whole round trip is traceable through this file:
 - **Entry.** `Keys.onDownPressed` on the island card
   (`NotchIslandBar.qml:3256`) bails unless the island is `expanded` and
   `displayedContext` is not already this id, then calls `markInteraction()` and
-  `setContext("island.themeSwitcher")` (`IslandState.qml:368`). The picker's own
-  field and strip accept their arrow keys, so a Down that reaches the card is
-  always an entry from outside the picker.
+  `setContext("island.themeSwitcher", true)` (`IslandState.qml:368`). The picker
+  enters as a user-owned manual context (hover lock + keyboard + no
+  pointer-away auto-hide), so its field and strip accept their arrow keys and
+  a Down that reaches the card is always an entry from outside the picker; its
+  shorter content cannot compact the card under the pointer and retire it.
 - **Exit.** `collapse()` (`IslandState.qml:380`) is the only exit: Escape on the
   card, or a click on the body outside it. The picker owns no teardown.
 - **`pageIds` exclusion.** The id is registered in the `nativeViews` map only
   (`DynamicIsland.qml:605`), never in the resolver's page list
   (`ContextResolver.qml:298`), so while the picker is inactive
   `pagePrev()`/`pageNext()` (`IslandState.qml:254`/`:247`) keep paging untouched.
-- **No new IPC command.** The 21-command block above is unchanged. Down is the
-  only trigger, and `debugOpen island.themeSwitcher` is the debug entry.
+- **Stack navigation.** The island is the centre: Down opens the theme picker,
+  Up opens the background picker; Up from the theme picker and Down from the
+  background picker return to the island (`openResolved()`). `noteBodyResize()`
+  keeps the pointer-away auto-hide from retiring a picker when its shorter
+  content compacts the card under the pointer.
+- **No new IPC command.** The 21-command block above is unchanged. Down/Up are
+  the only triggers, and `debugOpen island.themeSwitcher` / `debugOpen
+  island.backgroundPicker` are the debug entries.
 - **Palette.** The cards read `ThemePalette.qml`, one instance owned by
   `DynamicIsland` outside the body `Loader`, which makes a single warm-up pass at
   plugin load and watches `~/.local/state/omarchy/current/theme.name`. The apply
   path is `omarchy-theme-set <name>`, reconciled against that watcher.
+
+### Manual context: `island.backgroundPicker`
+
+The background picker (`views/BackgroundPickerView.qml`) is a manual context for the
+current theme's wallpapers. Its round trip mirrors the theme picker:
+
+- **Entry.** `Keys.onUpPressed` on the island card (`NotchIslandBar.qml:3285`)
+  opens it when the island is `expanded` and no picker is showing, via
+  `setContext("island.backgroundPicker")` (`IslandState.qml:368`). `Keys.onDownPressed`
+  on the card returns to the island (`openResolved()`) when the background picker
+  is showing. The picker's own field and strip accept their arrow keys, so an
+  unaccepted Down/Up from the view falls through to the card's stack handler.
+- **Exit.** `openResolved()` (`IslandState.qml:210`) is the return path (Down from
+  the picker or Up from the theme picker); `collapse()` (`:380`) also works via
+  Escape or an outside click. The picker owns no teardown.
+- **`pageIds` exclusion.** Registered only in `nativeViews` (`DynamicIsland.qml:613`),
+  never in the resolver's page list, so paging is untouched.
+- **Palette.** Cards read `BackgroundPalette.qml`, one instance outside the
+  `Loader` that watches `~/.local/state/omarchy/current/background` and
+  `theme.name`; warm-up lists `backgrounds/<theme>` and the theme's
+  `backgrounds` dir. Apply updates the `background` symlink and triggers the
+  wallpaper daemon.
 
 ## Indicator row and app spheres
 
@@ -305,12 +335,13 @@ becomes the entry page. The round trip is:
    shared `WindowSource.focusToplevel` and then collapses the island. The Lua
    dispatcher form is the one this Hyprland's config mode uses.
 
-### Click-opened islands: hover lock and keyboard
+### User-owned islands: hover lock and keyboard
 
 `IslandState.clickOpened` (`IslandState.qml:58`) is set by
 `setContext(id, true)` (`IslandState.qml:368-378`) — the path taken by an
-indicator circle (`PillIndicatorRow.qml:51`) and by a multi-window sphere
-(`PillAppSpheres.qml:62`). While it is true:
+indicator circle (`PillIndicatorRow.qml:51`), by a multi-window sphere
+(`PillAppSpheres.qml:62`), and by Down entering the theme picker
+(`NotchIslandBar.qml:3256`). While it is true:
 
 - the body surface takes `WlrKeyboardFocus.Exclusive`
   (`NotchIslandBar.qml:3179-3181`, through `escapeFocusWanted`, `:2055-2058`), so
@@ -325,11 +356,11 @@ indicator circle (`PillIndicatorRow.qml:51`) and by a multi-window sphere
   (`:380`) all clear the flag, so any hover-owned or hotkey open resumes normal
   behaviour.
 
-The normal hover-driven island never sets `clickOpened`, so the click-opened
-grant cannot leak into it; its pre-existing rule — keyboard focus while the
-pointer is on the body card and the island was not opened automatically — is
-unchanged, so a hover with the pointer still on the pill never grabs the
-keyboard.
+The normal hover-driven island never sets `clickOpened`, so that grant
+cannot leak into it; its pre-existing rule — keyboard focus while the pointer
+is on the body card and the island was not opened automatically — is extended
+to the pill body, so an open island now owns the keyboard while the pointer
+is on the pill (that is what makes Down from the pill work).
 
 ## Context resolution
 
