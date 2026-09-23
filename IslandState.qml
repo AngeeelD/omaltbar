@@ -47,20 +47,19 @@ Item {
   // Non-paged context: "" -> home view, a native view id, or a grid sentinel.
   property string manualContext: ""
 
-  // --- click-opened island: hover lock + keyboard ownership ----------------
-  // True while the island was opened by a click (an indicator circle, an app
-  // sphere) rather than by hover, a hotkey or an automatic appearance. While
-  // it is set the pointer must not expand/collapse the island nor change the
-  // displayed context, and the body surface is allowed to take the keyboard so
-  // ESC / arrows / digits work. It is cleared by collapse() and by any
-  // hover-owned open (openResolved / reveal), which is exactly when normal
-  // hover behaviour must resume.
+  // --- user-owned island: hover lock + keyboard ownership ------------------
+  // True while a user gesture owns the island — a click on an indicator
+  // circle / app sphere, or Down into island.themeSwitcher — rather than
+  // hover, a hotkey or an automatic appearance. While set the pointer must
+  // not expand/collapse the island nor change the displayed context, and the
+  // body may take the keyboard so ESC / arrows / digits work. Cleared by
+  // collapse() and by hover-owned opens (openResolved / reveal).
   property bool clickOpened: false
 
-  // The interaction that opened the island with a click. Kept separate from
-  // clickOpened so a context's own dismissal can clear the lock without losing
-  // which gesture owned it; currently only "island.windowList" uses it, but the
-  // flag is deliberately generic so more click-opened contexts can join.
+  // The interaction that opened the island as user-owned. Kept separate
+  // from clickOpened so a context's own dismissal can clear the lock without
+  // losing which gesture owned it; currently island.windowList and the
+  // key-entered island.themeSwitcher use it, but the flag stays generic.
   property string clickOpenedContext: ""
 
   // The context the router renders when no transient overlay is up.
@@ -361,10 +360,11 @@ Item {
     root.nativeViews = next
   }
 
-  // Open a manual context. `byClick` marks a click-opened island (an indicator
-  // circle or an app sphere): it engages the hover lock and lets the body take
-  // the keyboard for ESC / arrows / digits. Hotkeys and widget-icon clicks
-  // leave it false and keep the normal hover policy.
+  // Open a manual context. `byClick` marks a user-owned island (a click on
+  // an indicator circle / app sphere, or a key that enters a keyboard-driven
+  // context): it engages the hover lock and lets the body take the keyboard
+  // for ESC / arrows / digits. Hotkeys and widget-icon clicks leave it false
+  // and keep the normal hover policy.
   function setContext(contextId, byClick) {
     // A manual view replaces whatever reveal the pointer was holding open and
     // leaves paging, so the carousel never fights an explicit icon click.
